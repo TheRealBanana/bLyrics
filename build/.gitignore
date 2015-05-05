@@ -1,0 +1,6 @@
+*.pyc
+*.lnk
+*.zip
+dist/
+build/
+bLyrics_Multifiles_Compiled/
