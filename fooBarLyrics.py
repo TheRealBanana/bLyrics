@@ -13,6 +13,7 @@ import re, win32com.client
 from lyricswiki import lyricswikiObj
 
 #Age limit of the playlist cache before it grabs a new copy automatically. Default is 900 seconds (15 minutes)
+#This will be overridden later when the settings are loaded or defauls are set. This is just a backup in case things go wrong.
 _CACHE_AGE = 900
 
 #Just a quick little function to straighten out some of the escaped parenthesis before displaying them.
@@ -49,7 +50,8 @@ class lyricsClass:
 	
 	def searchForLyrics(self, artist="", song=""):
 		results = ""
-		if len(song) > -1:
+		#Only search when we have something to match for the song. No artist-only searches.
+		if len(song) > 1:
 			results = self.lwobj.getLyrics(artist, song, search_mode=True)
 		return results
 	
@@ -76,7 +78,7 @@ class lyricsClass:
 		self.manual_mode["song_at_set"] = self.song
 	
 	def manual_song_set(self, song_artist):
-		if song_artist[0] is not None and song_artist[1] is not None:
+		if song_artist[0] and song_artist[1]:
 			print "Querying artist and song manually..."
 			self.manual_mode["manual"] = True
 			self.manual_mode["artist"] = song_artist[0]
