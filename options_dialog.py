@@ -322,7 +322,7 @@ class Ui_OptionsDialog(object):
 		self.saveCancelButtons.setSizePolicy(sizePolicy)
 
 		buttonfont = QtGui.QFont()
-		buttonfont.setFamily(_fromUtf8("MS Shell Dlg 2"))
+		buttonfont.setFamily(_fromUtf8("Tahoma"))
 		buttonfont.setPointSize(8)
 		buttonfont.setBold(False)
 		buttonfont.setWeight(50)
@@ -395,13 +395,13 @@ class Ui_OptionsDialog(object):
 		global _SETDIR
 		#We just reset the UI to the default settings, nothing complex.
 		#Page One
-		self.fontSelectionTextbox.setText(_translate("OptionsDialog", "MS Shell Dlg 2, 8", None))
-		self.fontSelection = "MS Shell Dlg 2, 8"
+		self.fontSelectionTextbox.setText(_translate("OptionsDialog", "Tahoma, 8", None))
+		self.fontSelection = "Tahoma, 8"
 		self.bgColorSelector.currentColor = "#FFFFFF"
 		self.fgColorSelector.currentColor = "#000000"
 		self.bgColorSelector.setStyleSheet(_fromUtf8("background-color: %s;" % (self.bgColorSelector.currentColor)))
 		self.fgColorSelector.setStyleSheet(_fromUtf8("background-color: %s;" % (self.fgColorSelector.currentColor)))
-		self.fontPreviewBox.setStyleSheet(_fromUtf8("color: rgb(0, 0, 0); font: 8pt \"MS Shell Dlg 2\"; background-color: rgb(255, 255, 255);"))
+		self.fontPreviewBox.setStyleSheet(_fromUtf8("color: rgb(0, 0, 0); font: 8pt \"Tahoma\"; background-color: rgb(255, 255, 255);"))
 		
 		
 		#Page Two
@@ -651,7 +651,7 @@ class Ui_OptionsDialog(object):
 		
 		#FIRST TAB - APPEARANCE
 		self.fontSelectionGroup.setTitle(_translate("OptionsDialog", "Font", None))
-		self.fontSelectionTextbox.setText(_translate("OptionsDialog", "MS Shell Dlg 2, 8", None))
+		self.fontSelectionTextbox.setText(_translate("OptionsDialog", "Tahoma, 8", None))
 		self.selectFontButton.setText(_translate("OptionsDialog", "Select Font", None))
 		self.colorSelectionGroup.setTitle(_translate("OptionsDialog", "Colors", None))
 		self.bgColorLabel.setText(_translate("OptionsDialog", "Background: ", None))
@@ -659,7 +659,7 @@ class Ui_OptionsDialog(object):
 		self.fgColorSelector.setStyleSheet(_fromUtf8("background-color: #FFFFFF;"))
 		self.bgColorSelector.setStyleSheet(_fromUtf8("background-color: #000000;"))
 		self.fontPreviewLabel.setText(_translate("OptionsDialog", "Font Preview", None))
-		self.fontPreviewBox.setStyleSheet(_fromUtf8("color: rgb(0, 0, 0); font: 8pt \"MS Shell Dlg 2\"; background-color: rgb(255, 255, 255);"))
+		self.fontPreviewBox.setStyleSheet(_fromUtf8("color: rgb(0, 0, 0); font: 8pt \"Tahoma\"; background-color: rgb(255, 255, 255);"))
 		self.optionsTabContainer.setTabText(self.optionsTabContainer.indexOf(self.tab_Appearance), _translate("OptionsDialog", "Appearance", None))
 		##END FIRST TAB - APPEARANCE ##
 		
