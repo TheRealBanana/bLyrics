@@ -69,7 +69,9 @@ class lyricswikiObj:
 		
 		#We'll try both the wikia and songlyrics.com functions before we give up
 		self._DEBUG("mainGL: Getting lyrics from wikia_getLyrics()")
+		#Something went majorly wrong with wikia, have to fallback to songlyrics.com for now --  started working again, but leaving this comment here just in case
 		songLyrics = self.wikia_getLyrics(artist, song)
+		#songLyrics = None
 		if songLyrics is None:
 			self._DEBUG("mainGL: Previous function returned None, getting lyrics from songlyrics_getLyrics()")
 			songLyrics = self.songlyrics_getLyrics(artist, song)

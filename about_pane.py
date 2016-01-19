@@ -30,7 +30,7 @@ except AttributeError:
 		return QtGui.QApplication.translate(context, text, disambig)
 
 
-_PROGRAM_VER_ = "0.707b0 (W.I.P.) Experimental"
+_PROGRAM_VER_ = "0.708 (W.I.P.) Stable"
 
 class Ui_aboutWindow(object):
 	def setupUi(self, aboutWindow):

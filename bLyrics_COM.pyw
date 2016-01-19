@@ -23,7 +23,7 @@ from icon_resource import *
 from time import time as tTime
 from datetime import datetime as dTime
 from re import split as REsplit
-
+from re import sub as REsub
 
 #To force this program to always be on top of other windows change this to True
 _ALWAYS_ON_TOP_ = False
@@ -49,9 +49,10 @@ class Ui_MainWindow(object):
 	def setupUi(self, MainWindow):
 		#just a few class globals
 		self.output = [dTime.fromtimestamp(tTime()).strftime('%d/%b/%Y-%I:%M:%S %p:   ') + "PROGRAM_INIT"]
+		self.is_connected = False
 		self.windowTitle = None
 		self.timer = None
-		self.lyricsProg = lyricsClass()
+		self.lyricsProg = lyricsClass(self)
 		self.currentSong = None
 		self.last_sb_message = None
 		#Set up the name of our app and the company name for saving settings later
@@ -222,10 +223,10 @@ class Ui_MainWindow(object):
 		#QtCore.QObject.connect(self.consoleOutput, QtCore.SIGNAL(_fromUtf8("sourceChanged(QUrl)")), self.keepConsoleScroll) #Not working for some reason
 		QtCore.QMetaObject.connectSlotsByName(MainWindow)
 		
-		#Tell the user we're attempting to connect to the COM server  -  THIS MIGHT BE REDUNDANT
-		self.setWindowTitle("bLyrics  ::  Connecting....")
-		self.setLyricsText("Connecting....")
-		
+		#Tell the user we're not connected
+		self.setLyricsText("Not connected to Foobar2000's COM server, press refresh to try to connect.")		
+		self.setWindowTitle("bLyrics  ::  Not Connected - Press Refresh or Connect")
+		self.setStatusbarText("Disconnected from Foobar2000 COM Server")
 		
 		#Set up the internal loop that checks for a new song and retrieves lyrics when needed.
 		if self.timer is None:
@@ -245,8 +246,10 @@ class Ui_MainWindow(object):
 	def discon(self, forced=False):
 		self.actionReconnect.setText(_translate("MainWindow", "Connect", None))
 		self.lyricsProg.end_com()
-		if forced is False:
-			self.check_song_loop()
+		self.is_connected = False
+		self.setLyricsText("Not connected to Foobar2000's COM server, press refresh to try to connect.")		
+		self.setWindowTitle("bLyrics  ::  Not Connected - Press Refresh or Connect")
+		self.setStatusbarText("Disconnected from Foobar2000 COM Server")
 	
 	def openOptionsWindow(self):
 		widget = QtGui.QDialog()
@@ -273,8 +276,10 @@ class Ui_MainWindow(object):
 			return_data = [str(z) for z in return_data]
 		
 		#Now we get the first page of results in the form of a list where each item is a dictionary with three parts: Artist, Song Title, and URL.
-		if len(return_data) > 0: search_results = self.lyricsProg.searchForLyrics(song=return_data[1], artist=return_data[0])
-		else: search_results = ""
+		if len(return_data) > 0:
+			search_results = self.lyricsProg.searchForLyrics(song=return_data[1], artist=return_data[0])
+		else:
+			search_results = ""
 		if len(search_results) > 0:
 			result_html_template = '''
 <p style="font-weight: normal; font-family: Tahoma, Geneva, sans-serif; font-size: 18px; font-weight: bold;">%s)<a href="%s"><span style="font-size: 14px;"> %s <span style="font-weight: normal;">by</span> %s</span></a></p>'''
@@ -295,12 +300,12 @@ class Ui_MainWindow(object):
 	def resetManualEntry(self):
 		self.lyricsProg.resetManualEntry()
 		self.currentSong = None
-		self.check_song_loop()
+		self.check_song_loop(userasked=True)
 		
 	def setSearchResult(self, url):
 		self.lyricsProg.manual_url_set(str(url.toString()[1:])) # cut off the beginning hash
 		self.currentSong = None
-		self.check_song_loop()
+		self.check_song_loop(userasked=True)
 	
 	def openManualQueryDialog(self):
 		widget = QtGui.QDialog()
@@ -319,7 +324,7 @@ class Ui_MainWindow(object):
 			self.lyricsProg.manual_song_set(return_data)
 			#Now force the mainUI to update
 			self.currentSong = None
-			self.check_song_loop()
+			self.check_song_loop(userasked=True)
 			
 	
 	def openAboutWindow(self):
@@ -376,7 +381,9 @@ class Ui_MainWindow(object):
 		self.appSettings.sync()
 
 	def testSettingGroup(self, groupName):
-		for x in str(self.appSettings.allKeys().join(";")).split(";"):
+		#The reason we join() and then split() is because it's a quick way to convert a QStringList,
+		#containing a bunch of QStrings, all into a single string at once without adding iteration.
+		for x in str(self.appSettings.allKeys().join(";")).split(";"): #Why join and resplit?
 			if groupName in x:
 				#We are sure the group exists so we can continue
 				return True
@@ -483,10 +490,15 @@ class Ui_MainWindow(object):
 		print "Doing a hard refresh of lyrics...."
 		self.setLyricsText("Refreshing lyrics....")
 		
+		#Reset any manual/search mode
+		self.resetManualEntry()
+		
 		#Reset connection to com server
 		if self.lyricsProg.try_com():
+			self.is_connected = True
 			self.actionReconnect.setText(_translate("MainWindow", "Reconnect", None))
 		else:
+			self.is_connected = False
 			self.actionReconnect.setText(_translate("MainWindow", "Connect", None))
 	
 		#Reset internal variables to force the main loop to redo everything as if we changed songs.
@@ -513,6 +525,8 @@ p, li { white-space: pre-wrap; }
 		self.consoleOutput.setHtml(_translate("MainWindow", html, None))
 		
 	def write(self, text):
+		#This function allows us to set stderr and stdout to write to this function instead of the usual output.
+		#That way any time a print or error occurs it will be output to this function, which will write to the console tab.
 		if text.strip() != "":
 			if text != "__PROGAMINIT__":
 				timestamp = dTime.fromtimestamp(tTime()).strftime('%d/%b/%Y-%I:%M:%S %p:   ')
@@ -531,7 +545,7 @@ p, li { white-space: pre-wrap; }
 <p style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;">%s</p></body></html>
 ''' % (final_output)
 			self.consoleOutput.setHtml(_translate("MainWindow", html, None))
-			self.keepConsoleScroll()
+			self.keepConsoleScroll() #Chuck this function call, and the function itself. It isn't working. Just make sure it doesnt break anything in the process
 	
 	def setWindowTitle(self, text):
 		MainWindow.setWindowTitle(_translate("MainWindow", text, None))
@@ -540,7 +554,11 @@ p, li { white-space: pre-wrap; }
 	
 	
 	#This function is a MESS! CLEAN IT UP!
-	def check_song_loop(self):
+	def check_song_loop(self, userasked=False):
+		#Just return if we haven't connected yet
+		if self.is_connected == False and userasked == False:
+			return
+
 		#first thing will be to check if we have a current song, and if we do whether it has changed or not
 		if self.currentSong is None:
 			#Ok we don't have a song yet so lets set it for the first time.
@@ -570,7 +588,7 @@ p, li { white-space: pre-wrap; }
 					self.setLyricsText(self.currentLyrics)
 					#Set the statusbar to the current song or the next song, depending on factors. See fooBarLyrics.py for more details.
 					statusbar_songdata = self.lyricsProg.get_statusbar_song(templates=self.templates)
-					self.set_statusbar_text(statusbar_songdata)
+					self.setStatusbarText(statusbar_songdata)
 					#We also update the window title to reflect the new track and artist
 					self.setWindowTitle("bLyrics  ::  %s - %s" % (self.lyricsProg.get_songartist()))
 			else:
@@ -578,7 +596,7 @@ p, li { white-space: pre-wrap; }
 				#First we update the lyrics pane with the info
 				self.setLyricsText("Playing in Foobar2000 is currently stopped.")
 				#update the statusbar with the change
-				self.set_statusbar_text("Playback Stopped")
+				self.setStatusbarText("Playback Stopped")
 				#And the window title next
 				self.setWindowTitle("bLyrics  ::  Playback Stopped")
 				#return 1
@@ -592,7 +610,7 @@ p, li { white-space: pre-wrap; }
 			except:
 				actual_current_song = None
 		
-		if actual_current_song != self.currentSong:
+		if actual_current_song != self.currentSong and userasked == False:
 			#ok the current song isn't the same as the one we had set so the song has changed, we need to update everything to reflect that
 			#This is usually where things go south if the lyrics don't exist on the site. In the future there will be fallback options.
 			if actual_current_song != "stops":
@@ -606,7 +624,7 @@ p, li { white-space: pre-wrap; }
 					self.setWindowTitle("bLyrics  ::  Not Connected - Press Refresh or Connect")
 					self.actionReconnect.setText(_translate("MainWindow", "Connect", None))
 					#Reset the statusbar
-					self.set_statusbar_text("Disconnected from Foobar2000 COM Server")
+					self.setStatusbarText("Disconnected from Foobar2000 COM Server")
 					#And reset the current song
 					self.currentSong = None
 					
@@ -617,7 +635,7 @@ p, li { white-space: pre-wrap; }
 					self.setLyricsText(self.currentLyrics)
 					#Set the statusbar to the current song or the next song, depending on factors. See fooBarLyrics.py for more details.
 					statusbar_songdata = self.lyricsProg.get_statusbar_song()
-					self.set_statusbar_text(statusbar_songdata)
+					self.setStatusbarText(statusbar_songdata)
 					#We set the window title, that way the window title reflects the current track
 					self.setWindowTitle("bLyrics  ::  %s - %s" % (self.lyricsProg.get_songartist()))
 					
@@ -628,7 +646,7 @@ p, li { white-space: pre-wrap; }
 				#And the window title next
 				self.setWindowTitle("bLyrics  ::  Playback Stopped")
 				#update the statusbar with the change
-				self.set_statusbar_text("Playback Stopped")
+				self.setStatusbarText("Playback Stopped")
 				#And lastly update self.currentSong to stops so the program knows what's up
 				self.currentSong = actual_current_song
 
@@ -636,6 +654,10 @@ p, li { white-space: pre-wrap; }
 		fontFamily, size = REsplit(",", self.fontStyle)
 		fontFamily = str(fontFamily).strip()
 		fontSize = str(size).strip()
+		#Remove href, img, and div tags from the lyrics
+		lyrics = REsub("</?a( .*?)?>", "", lyrics)
+		lyrics = REsub("</?div( .*?)?>", "", lyrics)
+		lyrics = REsub("</?img( .*?)?>", "", lyrics)
 		html = '''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0//EN" "http://www.w3.org/TR/REC-html40/strict.dtd">
 <html><head><meta name="qrichtext" content="1" /><style type="text/css">
 p, li { white-space: pre-wrap; }
@@ -673,7 +695,7 @@ p, li { white-space: pre-wrap; }
 
 	
 	
-	def set_statusbar_text(self, text):
+	def setStatusbarText(self, text):
 		if text is not None and len(text) > 0:
 			self.Statusbar.setText(_translate("MainWindow", text, None))
 

@@ -22,9 +22,9 @@ def _pUnescape(ostring):
 	fstring = "pUnescape Error"
 	if isinstance(ostring, basestring):
 		fstring = ostring
-		while re.search("(\\\\[()])", fstring) is not None:
-			fstring = fstring.replace("\)", ")")
-			fstring = fstring.replace("\(", "(")
+		while re.search("(\\\\[()])", fstring) is not None:  #Why loop when replace() should do all instances at once? 
+			fstring = fstring.replace("\)", ")")			 #It should never even reach the second iteration, and if it does that means the code isn't catching
+			fstring = fstring.replace("\(", "(")			 #the parenthesis, which means it should repeat forever. This just seems like bad code.
 		
 	if isinstance(ostring, tuple):
 		fstring = ()
@@ -37,7 +37,8 @@ def _pUnescape(ostring):
 
 class lyricsClass:
 	
-	def __init__(self):
+	def __init__(self, context):
+		self.context = context
 		self.songLyrics = None
 		self.artist = None
 		self.song = None
@@ -75,6 +76,8 @@ class lyricsClass:
 		self.manual_mode["song"] = url_split[1]
 		self.manual_mode["search_url"] = url_split[0]
 		self.update_current_track()
+		if self.song is None:
+			self.song = ""
 		self.manual_mode["song_at_set"] = self.song
 	
 	def manual_song_set(self, song_artist):
@@ -84,6 +87,8 @@ class lyricsClass:
 			self.manual_mode["artist"] = song_artist[0]
 			self.manual_mode["song"] = song_artist[1]
 			self.update_current_track()
+			if self.song is None:
+				self.song = ""
 			self.manual_mode["song_at_set"] = self.song
 	
 	def clear_playlist_cache(self):
@@ -101,17 +106,29 @@ class lyricsClass:
 	
 	def get_statusbar_song(self, templates=None, selfie=False):
 		#This function will either return the next song in the playlist (if playing in default order) or just returns the current song in nicely formatted order
+		
+		#Do nothing if we arent already connected
+		if self.context.is_connected == False:
+			return
+		
 		#Make sure we have a good com handle before we do anything, try to get it if its not active
+		
 		try:
 			self.try_com()
 			self.fbcom_handle
 		except:
 			return None
-
+		
+		next_song = ""
+		
 		#See if our playback method supports getting the next song in the list:
 		if self.fbcom_Playback.Settings.ActivePlaybackOrder == u"Default" or "playlist" in self.fbcom_Playback.Settings.ActivePlaybackOrder:
 			#Figure out the current playlist in use, see if we have that playlist cached or not
 			current_playlist_index = self.fbcom_handle.Playlists.ActivePlaylist.Index
+			
+			#We should check and see if the "current selection" playlist has a consistent index
+			#If so we should excluse it from the cache time limit since it can change at the users whim
+			#In fact, we should just try and locate the current song in the playlist and if its not there, we update the playlist cache
 			try:
 				self.playlist_database[current_playlist_index]
 				if tTime() - self.playlist_database[current_playlist_index][0] > _CACHE_AGE:
@@ -148,7 +165,7 @@ class lyricsClass:
 					#If they are adjacent then the song after those two will be our next song. This is only accurate if playing continuously in
 					#order and the user doesn't skip forward to a non-unique song in the playlist.
 					for j in new_indices:
-						for k in old_indices:
+						for k in old_indices: #Could we replace this with an index() lookup of j-1 instead of going through k and trying to match it?
 							if j-1 == k:
 								nextsongdata = re.match("(?P<song>.*?)::(?P<artist>.*)", self.playlist_database[current_playlist_index][j+1])
 								next_song = "Next song:  %s - %s" % (nextsongdata.group("song"), nextsongdata.group("artist"))
@@ -191,7 +208,7 @@ class lyricsClass:
 		#This will just update self.artist and self.song to the proper values if everything is working properly, it will
 		#return None for both vars if the COM connection has failed and will return stop for both vars if no song is playing.
 		
-		#Start thinking about how we can override this function entirely and manually set the song manually.
+		#Start thinking about how we can override this function entirely and set the song manually.
 		#We have to keep track of the current playing song still because when the song changes we still want to change the lyrics to the next song. 
 		#In this instance we will assume the user has overridden our program because the lyrics are incorrect, incomplete, missing, or otherwise not what the user wants. 
 		#
@@ -217,6 +234,12 @@ class lyricsClass:
 					#Ok the song has changed, we need to update the last song
 					self.last_song = unicode("%s::%s" % (_pUnescape(self.song), _pUnescape(self.artist)))
 				#A similar check for manual mode, has to be separate however for a single eventuality
+				#Handle searching at start, before we aquire the current song
+				if self.manual_mode["song_at_set"] is None:
+					self.manual_mode["song_at_set"] = ""
+				#This function cleans up the searched/manually set song when the song in foobar changes.
+				#It is assumed the user searched for lyrics because the currently playing song didn't normally come up in bLyrics.
+				#So they should want it changed when the song changes.
 				if self.manual_mode["manual"] == True and self.manual_mode["song_at_set"] not in newsong:
 					self.manual_mode["manual"] = False
 					self.manual_mode["search_mode"] = False
@@ -256,7 +279,10 @@ class lyricsClass:
 	
 	def getLatestLyrics(self):
 		self.update_current_track()
-		if  self.song is not None and self.song != "stop":
+		if  self.manual_mode["manual"] == True:
+			self.getLyrics()
+		
+		elif  self.song is not None and self.song != "stop":
 			if  len(self.song) > 0:
 				self.getLyrics()
 			else:
