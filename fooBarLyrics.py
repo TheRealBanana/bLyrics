@@ -45,7 +45,7 @@ class lyricsClass:
 		self.last_song = None
 		self.fbcom_handle = None
 		self.fbcom_Playback = None
-		self.manual_mode = {"manual": False, "song": "", "artist": "", "song_at_set": "", "search_mode": False, "search_url": ""} # [None,None] if not manual mode.[artist,song] when set manually
+		self.manual_mode = {"manual": False, "song": "", "artist": "", "song_at_set": "", "search_mode": False, "search_url": ""}
 		self.playlist_database = {}
 		self.lwobj = lyricswikiObj()
 	
@@ -57,7 +57,6 @@ class lyricsClass:
 		return results
 	
 	def resetManualEntry(self):
-		print "Manual mode reset!"
 		self.manual_mode["manual"] = False
 		self.manual_mode["search_mode"] = False
 		self.manual_mode["song_at_set"] = ""
@@ -267,15 +266,15 @@ class lyricsClass:
 			artist = self.artist
 			song = self.song
 		
-		try:
-			if self.manual_mode["search_mode"] == True:
-				self.songLyrics = self.lwobj.getLyrics(artist, song, manual_mode=self.manual_mode["manual"], search_url=self.manual_mode["search_url"])
-			else:
-				self.songLyrics = self.lwobj.getLyrics(artist, song, manual_mode=self.manual_mode["manual"])
-		except Exception as error:
-			print "DBG_B1"
-			print error
-			print "=======DBGB1======="
+	#try:
+		if self.manual_mode["search_mode"] == True:
+			self.songLyrics = self.lwobj.getLyrics(artist, song, manual_mode=self.manual_mode["manual"], search_url=self.manual_mode["search_url"])
+		else:
+			self.songLyrics = self.lwobj.getLyrics(artist, song, manual_mode=self.manual_mode["manual"])
+	#except Exception as error:
+	#	print "DBG_B1"
+	#	print error
+		print "=======DBGB1======="
 	
 	def getLatestLyrics(self):
 		self.update_current_track()

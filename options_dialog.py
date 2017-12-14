@@ -86,6 +86,7 @@ class Ui_OptionsDialog(object):
 		font = QtGui.QFont()
 		font.setPointSize(10)
 		self.fontSelectionTextbox.setFont(font)
+		self.fontSelection = "MS Shell Dlg 2, 12"
 		self.fontSelectionTextbox.setReadOnly(True)
 		self.fontSelectionTextbox.setObjectName(_fromUtf8("fontSelectionTextbox"))
 		self.colorSelectionGroup = QtGui.QGroupBox(self.tab_Appearance)
@@ -119,6 +120,7 @@ class Ui_OptionsDialog(object):
 		self.fgColorSelector = QtGui.QToolButton(self.fgColorSelectorFrame)
 		self.fgColorSelector.setAutoFillBackground(False)
 		self.fgColorSelector.setStyleSheet(_fromUtf8("background-color: rgb(0, 0, 0);"))
+		self.fgColorSelector.currentColor = "rgb(0, 0, 0);"
 		self.fgColorSelector.setText(_fromUtf8(""))
 		self.fgColorSelector.setIconSize(QtCore.QSize(16, 16))
 		self.fgColorSelector.setToolButtonStyle(QtCore.Qt.ToolButtonIconOnly)
@@ -139,6 +141,7 @@ class Ui_OptionsDialog(object):
 		self.bgColorSelector = QtGui.QToolButton(self.bgColorSelectorFrame)
 		self.bgColorSelector.setAutoFillBackground(False)
 		self.bgColorSelector.setStyleSheet(_fromUtf8("background-color: rgb(255, 255, 255);"))
+		self.bgColorSelector.currentColor = "rgb(255, 255, 255);"
 		self.bgColorSelector.setText(_fromUtf8(""))
 		self.bgColorSelector.setIconSize(QtCore.QSize(16, 16))
 		self.bgColorSelector.setToolButtonStyle(QtCore.Qt.ToolButtonIconOnly)
@@ -503,6 +506,8 @@ class Ui_OptionsDialog(object):
 		requestedData["Advanced"].append("alwaysOnTop")
 		
 		#Gather the data
+		#Ok so its possible that loadSettings will request this function, loadOptions, to return data, which requires us to call back to loadSettings.
+		#Do you see how absurdly and needlessly complicated this is? Bad design. Most of this should be moved to loadSettings()
 		returnData = MainWindow.loadSettings(optionsMenu=True, data=requestedData)
 
 		#Some of the true/false option need to be corrected
@@ -511,12 +516,12 @@ class Ui_OptionsDialog(object):
 				currentIndex = returnData[key].index(val)
 				if isinstance(val, basestring):
 					if val == "true": returnData[key][currentIndex] = True
-					if val == "false": returnData[key][currentIndex] = False
+					elif val == "false": returnData[key][currentIndex] = False
 				if isinstance(val, list):
 					for x in val: #Same here, enumerate gets rid of the line below
 						cursubIndex = returnData[key][currentIndex].index(x)
 						if x == "true": returnData[key][currentIndex][cursubIndex] = True
-						if x == "false": returnData[key][currentIndex][cursubIndex] = False
+						elif x == "false": returnData[key][currentIndex][cursubIndex] = False
 						
 		
 		#If this data was requested by something else we return the data
@@ -566,6 +571,7 @@ class Ui_OptionsDialog(object):
 	
 	def selectFont(self):
 		fontDialog = QtGui.QFontDialog()
+		print "FONT: %s" % self.fontSelection
 		fontFamily, size = REsplit(",", self.fontSelection)
 		fontFamily = fontFamily.strip()
 		fontSize = int(size.strip())

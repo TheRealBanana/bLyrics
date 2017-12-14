@@ -4,11 +4,11 @@
 #This script was designed specifically to pull lyrics from lyrics.wikia.com using their SOAP interface. This is a pretty poor lyrics provider so I added in a fallback 
 #lyrics provider using songlyrics.com. Unfortunately songlyrics.com doesn't provide an API so we have to manually scrape the info ourselves using urllib
 #
-# Revision 013 
-# Last Modified: July 21, 2014
+# Revision 014 
+# Last Modified: April 21, 2016
 #
 
-import re, HTMLParser, urllib, socket
+import re, HTMLParser, urllib, urllib2, cookielib, socket
 from os import path
 from os import sep as ossep
 from suds.client import Client
@@ -17,9 +17,10 @@ from difflib import SequenceMatcher as sMatcher
 
 #This is the master probability value used to determine if a match has been found or not
 #Anything over 0.6 is considered a good match but sometimes on titles that are very similar a higher ratio is required.
+#This will be overridden by the user's options, this is just a fallback default.
 _MASTER_RATIO = 0.65
 
-#Turn debug mode on (True) or off (False) by changing this var, also manage the writing of debug info to disk.
+#Turn debug mode on (True) or off (False) by changing this var, also manage the writing of extra debug info to disk.
 _DEBUG_MODE = False
 _DBGWRITE = False
 _DBGWRITEFOLDER = path.dirname(path.realpath(__file__))
@@ -46,6 +47,8 @@ def _pUnescape(ostring):
 			
 	return fstring
 
+
+
 class lyricswikiObj:
 	
 	def setInternalOptions(self, options):	
@@ -70,7 +73,13 @@ class lyricswikiObj:
 		#We'll try both the wikia and songlyrics.com functions before we give up
 		self._DEBUG("mainGL: Getting lyrics from wikia_getLyrics()")
 		#Something went majorly wrong with wikia, have to fallback to songlyrics.com for now --  started working again, but leaving this comment here just in case
-		songLyrics = self.wikia_getLyrics(artist, song)
+		try:
+			songLyrics = self.wikia_getLyrics(artist, song)
+			#songLyrics = None
+		except Exception as e:
+			songLyrics = None
+			print "Wikia failed with following error:"
+			print e
 		#songLyrics = None
 		if songLyrics is None:
 			self._DEBUG("mainGL: Previous function returned None, getting lyrics from songlyrics_getLyrics()")
@@ -117,9 +126,18 @@ class lyricswikiObj:
 			self._DEBUG("lwoGlDBG-t1 c")
 			encoded = True
 		except:
-			#Ok so its not escaped, just in plaintext
-			self._DEBUG("lwoGlDBG-t1 d")
-			encoded = False
+			#Try second guess
+			try:
+				self._DEBUG("lwoGlDBG-t1 e")
+				fcrap = re.search("class='lyricbox'>(.*)<div class='lyricsbreak'></div>", html).group(1)
+				self._DEBUG("lwoGlDBG-t1 f")
+				cleancrap = re.search("((?:</[a-zA-Z]{1,15}>){0,6})&#(.*)", fcrap)
+				self._DEBUG("lwoGlDBG-t1 g")
+				encoded = True
+			except:	
+				#Ok so its not escaped, just in plaintext
+				self._DEBUG("lwoGlDBG-t1 d")
+				encoded = False
 		
 		if encoded:
 			self._DEBUG(fcrap, write=True, filen="fcrap-%s_%s.txt" % (song, artist))
@@ -131,9 +149,11 @@ class lyricswikiObj:
 				return None
 	
 			if cleancrap.group(1) is not None:
-				actual = cleancrap.group(1) + "&#" + str(cleancrap.group(2)) + ";"
+				actual = cleancrap.group(1) + "&#" + str(cleancrap.group(2))
 			else:		
-				actual = "&#" + str(cleancrap.group(2)) + ";" #Just putting back some characters that were cut earlier in processing
+				actual = "&#" + str(cleancrap.group(2)) #Just putting back some characters that were cut earlier in processing
+			if actual[-1] != ";":
+				actual += ";"
 			almostdone = hparse.unescape(actual)
 			finishedlyrics = almostdone
 			#finishedlyrics = almostdone.replace("<br />", "\n")
@@ -185,7 +205,19 @@ class lyricswikiObj:
 		queryurl = surl % (query_data)
 		
 		#Now lets execute the search and get the html returned so we can work on it
-		search_query = urllib.urlopen(queryurl)
+		downloaderHeaders = {
+		"User-Agent": "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:49.0) Gecko/20100101 Firefox/49.0",
+		"Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+		"Accept-Language": "en-US,en;q=0.5",
+		"Accept-Encoding": "deflate",
+		"Cookie": "YWP_VOLUME=0.5; ywadp10001467053656=1371487762; ywadp1000255860556=3770811279; __cfduid=d0dd12f0e5d2095f5a8c9f9e1728be3db1475024653; PHPSESSID=63lfj2s85v8clhbnrdrvph73q1",
+		"DNT": "1",
+		"Connection": "keep-alive",
+		"Upgrade-Insecure-Requests": "1"
+		}
+		
+		request = urllib2.Request(queryurl, None, downloaderHeaders)
+		search_query = urllib2.urlopen(request)
 		search_html = search_query.read()
 		search_query.close()
 	
@@ -211,9 +243,7 @@ class lyricswikiObj:
 			#Now we need to find the url for the right song in this mess of HTML
 			#Lucky for us the title of each song is listed in an href tag and makes the job much easier
 			try:
-				
 				self._DEBUG("lwDBG A"); lwdbgstage = "A"
-				
 				#The initial lyrics results start just under the div labeled 'search-results' and ends just before the last ul tag labeled 'pagination'
 				refined_results = re.search("<div class=\"search-results\">(.*)<ul class=\"pagination\">", search_html, re.S|re.I).group(1)
 				
@@ -244,9 +274,10 @@ class lyricswikiObj:
 	
 		# OK, if we've gotten this far we should have a lyrics_url with the proper url inside it. Now all we have to
 		# do is download the page lyrics_url is pointing to and cut out just the lyrics
-		lyrics_page = urllib.urlopen(lyrics_url)
-		lyrics_html = lyrics_page.read()
-		lyrics_page.close()
+		lyrics_request = urllib2.Request(lyrics_url, None, downloaderHeaders)
+		lyrics_query = urllib2.urlopen(lyrics_request)
+		lyrics_html = lyrics_query.read()
+		lyrics_query.close()
 		
 		self._DEBUG(lyrics_html, True, "raw_lyrics_html-%s.html" % (clean_song))
 		
