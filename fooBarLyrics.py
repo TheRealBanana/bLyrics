@@ -194,6 +194,7 @@ class lyricsClass:
 			self.fbcom_Playback = self.fbcom_handle.Playback
 			return True
 		except:
+			print "Failed to connect to foobar2k's COM server. Please double check you have the COM server plugin installed."
 			self.fbcom_handle = None
 			self.fbcom_Playback = None
 			return False
