@@ -16,6 +16,6 @@ exe = EXE(pyz,
           name='bLyrics_COM.exe',
           debug=False,
           strip=None,
-          upx=True,
+          upx=False,
           console=False,
           icon='icon/bLyrics.ico')
