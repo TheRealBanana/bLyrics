@@ -88,8 +88,12 @@ class foobarStatusDownloader(threading.Thread):
         current_page = (current_song_id/int(data["playlistItemsPerPage"])) + 1
         #Now we need to redownload the data with the proper page to be sure
         #First make sure we're currently focused on the correct playlist
-        self.queryWebInterface("/ajquery/?cmd=SwitchPlaylist&&param1=%s&param3=js/state.json" % data["playlistPlaying"], noreturn=True)
-        data = self.queryWebInterface("/ajquery/?cmd=P&&param1=%s&param3=js/state.json" % str(current_page))
+        if data["playlistActive"] != data["playlistPlaying"]:
+            self.queryWebInterface("/ajquery/?cmd=SwitchPlaylist&&param1=%s&param3=js/state.json" % data["playlistPlaying"], noreturn=True)
+            data = self.queryWebInterface("/ajquery/?cmd=P&&param1=%s&param3=js/state.json" % str(current_page))
+        #Are we on the correct page?
+        if int(data["playlistPage"]) != current_page:
+            data = self.queryWebInterface("/ajquery/?cmd=P&&param1=%s&param3=js/state.json" % str(current_page))
         cur_position_on_page = current_song_id - (current_page-1) * int(data["playlistItemsPerPage"])
         current_song_name = data["playlist"][cur_position_on_page]["t"]
         current_artist = data["playlist"][cur_position_on_page]["a"]
@@ -105,10 +109,14 @@ class foobarStatusDownloader(threading.Thread):
                 next_song_in_playlist = data["playlist"][cur_position_on_page+1]["t"] + " - " + data["playlist"][cur_position_on_page+1]["a"]
             except:
                 next_song_in_playlist = "End of Playlist"
-        #Switch the interface back to its starting configuration
-        self.queryWebInterface("/ajquery/?cmd=SwitchPlaylist&&param1=%s&param3=js/state.json" % oldplaylist, noreturn=True)
-        self.queryWebInterface("/ajquery/?cmd=P&&param1=%s&param3=js/state.json" % oldpage, noreturn=True)
-        self.queryWebInterface("/ajquery/?cmd=SetFocus&&param1=%s&param3=js/state.json" % oldselection, noreturn=True)
+        #Switch the interface back to its starting configuration if we changed anything
+
+        if data["playlistActive"] != oldplaylist:
+            self.queryWebInterface("/ajquery/?cmd=SwitchPlaylist&&param1=%s&param3=js/state.json" % oldplaylist, noreturn=True)
+        if data["playlistPage"] != oldpage:
+            self.queryWebInterface("/ajquery/?cmd=P&&param1=%s&param3=js/state.json" % oldpage, noreturn=True)
+        if data["focusedItem"] != oldselection:
+            self.queryWebInterface("/ajquery/?cmd=SetFocus&&param1=%s&param3=js/state.json" % oldselection, noreturn=True)
 
         return_data = {}
         return_data["isplaying"] = isplaying
