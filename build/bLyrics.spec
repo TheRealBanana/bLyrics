@@ -2,7 +2,7 @@
 from os import getcwd
 _CURDIR = getcwd()
 
-a = Analysis(['bLyrics_COM.pyw'],
+a = Analysis(['bLyrics2.pyw'],
              pathex=[_CURDIR],
              hiddenimports=[],
              hookspath=None,
@@ -13,7 +13,7 @@ exe = EXE(pyz,
           a.binaries,
           a.zipfiles,
           a.datas,
-          name='bLyrics_COM.exe',
+          name='bLyrics2.exe',
           debug=False,
           strip=None,
           upx=False,

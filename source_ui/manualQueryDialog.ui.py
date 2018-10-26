@@ -2,8 +2,7 @@
 
 # Form implementation generated from reading ui file 'manualQueryDialog.ui'
 #
-# Created: Mon Sep 29 19:48:53 2014
-#      by: PyQt4 UI code generator 4.9.6
+# Created by: PyQt4 UI code generator 4.11.4
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -35,10 +34,10 @@ class Ui_customQueryDialog(object):
         customQueryDialog.setSizePolicy(sizePolicy)
         customQueryDialog.setMinimumSize(QtCore.QSize(280, 130))
         customQueryDialog.setMaximumSize(QtCore.QSize(280, 130))
-        customQueryDialog.setModal(True)
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap(_fromUtf8(":/icon/bLyrics.ico")), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         customQueryDialog.setWindowIcon(icon)
+        customQueryDialog.setModal(True)
         self.gridLayout = QtGui.QGridLayout(customQueryDialog)
         self.gridLayout.setObjectName(_fromUtf8("gridLayout"))
         self.mainFrame = QtGui.QFrame(customQueryDialog)

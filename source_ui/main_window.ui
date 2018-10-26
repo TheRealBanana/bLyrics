@@ -226,7 +226,7 @@ p, li { white-space: pre-wrap; }
   </customwidget>
  </customwidgets>
  <resources>
-  <include location="../resources/bLyrics.qrc"/>
+  <include location="../icon/icon_resource.qrc"/>
  </resources>
  <connections>
   <connection>

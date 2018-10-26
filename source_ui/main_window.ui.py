@@ -2,8 +2,7 @@
 
 # Form implementation generated from reading ui file 'main_window.ui'
 #
-# Created: Mon Sep 15 06:19:30 2014
-#      by: PyQt4 UI code generator 4.9.6
+# Created by: PyQt4 UI code generator 4.11.4
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -56,6 +55,8 @@ class Ui_MainWindow(object):
         self.lyricsTextView = QtGui.QTextBrowser(self.LyricsTab)
         self.lyricsTextView.setObjectName(_fromUtf8("lyricsTextView"))
         self.gridLayout_3.addWidget(self.lyricsTextView, 0, 0, 1, 2)
+        self.RefreshLyricsButton.raise_()
+        self.lyricsTextView.raise_()
         self.tabWidget.addTab(self.LyricsTab, _fromUtf8(""))
         self.ConsoleTab = QtGui.QWidget()
         self.ConsoleTab.setObjectName(_fromUtf8("ConsoleTab"))
@@ -111,7 +112,7 @@ class Ui_MainWindow(object):
         self.menubar.addAction(self.menuHelp.menuAction())
 
         self.retranslateUi(MainWindow)
-        self.tabWidget.setCurrentIndex(0)
+        self.tabWidget.setCurrentIndex(2)
         QtCore.QObject.connect(self.RefreshLyricsButton, QtCore.SIGNAL(_fromUtf8("clicked()")), MainWindow.close)
         QtCore.QObject.connect(self.tabWidget, QtCore.SIGNAL(_fromUtf8("currentChanged(int)")), self.MainStatusWebView.reload)
         QtCore.QObject.connect(self.actionQuit, QtCore.SIGNAL(_fromUtf8("triggered()")), MainWindow.close)
@@ -146,4 +147,4 @@ class Ui_MainWindow(object):
         self.actionOptions.setText(_translate("MainWindow", "Options", None))
 
 from PyQt4 import QtWebKit
-import bLyrics_rc
+import icon_resource_rc

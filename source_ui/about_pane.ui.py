@@ -2,8 +2,7 @@
 
 # Form implementation generated from reading ui file 'about_pane.ui'
 #
-# Created: Tue May 28 03:42:26 2013
-#      by: PyQt4 UI code generator 4.9.6
+# Created by: PyQt4 UI code generator 4.11.4
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -51,15 +50,15 @@ class Ui_aboutWindow(object):
         QtCore.QMetaObject.connectSlotsByName(aboutWindow)
 
     def retranslateUi(self, aboutWindow):
-        aboutWindow.setWindowTitle(_translate("aboutWindow", "NotForm", None))
+        aboutWindow.setWindowTitle(_translate("aboutWindow", "About bLyrics", None))
         self.aboutBox.setHtml(_translate("aboutWindow", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
 "</style></head><body style=\" font-family:\'MS Shell Dlg 2\'; font-size:8.25pt; font-weight:400; font-style:normal;\">\n"
-"<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:12pt; font-weight:600;\">bLyrics v1.0</span></p>\n"
-"<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:8pt;\">(Written by TheRealBanana)</span></p>\n"
-"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:8pt;\">This is an application written in python with the help of PyQt4. It makes use of foobar2000\'s web interface and an android application\'s special web interface called foobar2000controller. It provides a very simple output of text that can surprisingly be eval\'d directly into a working dictionary in python. </span></p>\n"
+"<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:12pt; font-weight:600;\">bLyrics v2.0</span></p>\n"
+"<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:8pt;\">(Written by Kyle Claisse)</span></p>\n"
+"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:8pt;\">This is an application written in python with the help of PyQt4. It makes use of foobar2000\'s web interface and an android application\'s special web interface called foobar2000controller.</span></p>\n"
 "<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:8pt;\"><br /></p>\n"
-"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:8pt;\">The lyrics are provided by LyricsWiki but that is soon to change as they are unreliable or unable to provide full lyrics for all songs. </span></p></body></html>", None))
+"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:8pt;\">The lyrics are provided by LyricsWiki with Songlyrics as a backup and for searches.</span></p></body></html>", None))
         self.closeButton.setText(_translate("aboutWindow", "Close", None))
 

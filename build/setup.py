@@ -4,7 +4,7 @@ import py2exe, sys
 sys.argv.append('py2exe')
 
 setup(
-	scripts = ["bLyrics_COM.pyw"],
+	scripts = ["bLyrics2.pyw"],
 	windows = 
 		[{
 			"script": "bLyrics_COM.pyw",
