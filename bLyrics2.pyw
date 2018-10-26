@@ -39,14 +39,14 @@ if __name__ == "__main__":
     global _ALWAYS_ON_TOP_
     app = QtGui.QApplication(sys.argv)
     MainWindow = QtGui.QMainWindow()
-    ui = Ui_MainWindow()
+    ui = Ui_MainWindow(MainWindow)
     #Set up our standard out and error before setting up the UI
     outfuncs = OUTMETHODS(ui.UiFunctions.write, sys.stdout, sys.stderr)
     out = outfuncs.stdout
     err = outfuncs.stderr
     sys.stdout = out
     sys.stderr = err
-    ui.setupUi(MainWindow)
+    ui.setupUi()
     # Hook into the app's quiting sequence so it saves our settings before it quits
     app.aboutToQuit.connect(ui.UiFunctions.saveSettings)
     # Before we get going we get the user setting for _ALWAYS_ON_TOP
@@ -58,7 +58,5 @@ if __name__ == "__main__":
     if _ALWAYS_ON_TOP_:
         MainWindow.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
     MainWindow.show()
-    # And now print a special string to kickstart the console output
-    print "__PROGAMINIT__"
 
     sys.exit(app.exec_())

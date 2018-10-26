@@ -93,7 +93,6 @@ class lyricswikiObj(object):
         self.manual_mode["artist"] = ""
 
     def manual_url_set(self, url):
-        print "CYKA BLYAT"
         url_split = re.split("::", url)
         #url_split[0] = url
         #url_split[1] = song title
@@ -107,8 +106,6 @@ class lyricswikiObj(object):
         #self.update_current_track(self.manual_mode["song"], self.manual_mode["artist"])
         if self.song is None:
             self.song = ""
-        print "11111 SETTING TO %s" % self.song
-        print "22222 ALSO TO %s" % self.manual_mode["song"]
         self.manual_mode["song_at_set"] = self.song
         self.song = self.manual_mode["song"]
         self.artist = self.manual_mode["artist"]

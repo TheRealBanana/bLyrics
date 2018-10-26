@@ -11,7 +11,6 @@ from time import time as tTime
 from datetime import datetime as dTime
 from re import split as REsplit
 from re import sub as REsub
-from PyQt4.QtCore import SIGNAL
 
 
 #To force this program to always be on top of other windows change this to True
@@ -32,42 +31,31 @@ except AttributeError:
         return QtGui.QApplication.translate(context, text, disambig)
 
 #Downloads the current song/artist/playmode from foobar's ajquery web interface
-class foobarStatusDownloader(threading.Thread):
+class foobarStatusDownloader():
     def __init__(self, MWref, hostnameandport):
-        super(foobarStatusDownloader, self).__init__()
         self.MWref = MWref
         self.address = hostnameandport[0]
         self.port = hostnameandport[1]
 
-
     def queryWebInterface(self, urlsuffix="/ajquery/?param3=js/state.json", noreturn=False):
         try:
-            page = urllib2.urlopen("http://" + self.address + ":" + self.port + str(urlsuffix))
+            page = urllib2.urlopen("http://" + str(self.address) + ":" + str(self.port) + str(urlsuffix))
             if noreturn:
                 return None
             rawjson = page.read()
             page.close()
             data = json.loads(rawjson)
         except Exception as e:
-            print "Shits on fire yo ->"
-            print "%s:%s" % (self.address, self.port)
-            '''
-            print "1----------"
-            print e
-            print "2----------"
-            import traceback
-            traceback.print_exc()
-            '''
             return None
         return data
 
 
-    def run(self):
+    def getStatus(self):
         data = self.queryWebInterface()
 
         if data is None:
-            self.MWref.emit(SIGNAL("foobarStatus"), None)
-            return
+            print "Connection error of some sort"
+            return None
 
         isplaying = int(data["isPlaying"])
         ispaused = int(data["isPaused"])
@@ -103,7 +91,7 @@ class foobarStatusDownloader(threading.Thread):
         return_data["song_name"] = current_song_name
         return_data["artist_name"] = current_artist
         return_data["next_song_in_playlist"] = next_song_in_playlist
-        self.MWref.emit(SIGNAL("foobarStatus"), return_data)
+        return return_data
 
 
 class UIFunctions(object):
@@ -117,6 +105,8 @@ class UIFunctions(object):
         self.actual_song = ""
         self.last_song = None
         self.lyricsProg = lyricswikiObj(self)
+        self.address = ("127.0.0.1", 8888)
+        self.fb2k = foobarStatusDownloader(UiReference.MainWindow, self.address)
         self.last_sb_message = None
         #Set up the name of our app and the company name for saving settings later
         #We also tell it to save as an INI file in %APPDATA% (the default location)
@@ -124,7 +114,6 @@ class UIFunctions(object):
         #Need this to load options without excess code
         self.optionsWindowui = Ui_OptionsDialog()
         self.webStatus_URL = ""
-        self.address = ("127.0.0.1", 8888)
         #Some default settings for the appearance
         self.fontStyle = 'MS Shell Dlg 2, 8'
         self.fontFgColor = '#000000'
@@ -137,18 +126,10 @@ class UIFunctions(object):
     #This timer is executed every 5 seconds, ostensibly to check whether our song has changed or not but
     #its evolved to do quite a bit more over time. Hopefully I can cut out the cruft.
     def mainAppLoop(self):
-        #Because our thread contains no loops that could become stuck (and urllib should just time out) theres
-        #no real reason to keep thread references around to make sure they all join and clean up. They will all
-        #return somehow eventually no matter what. I'm using threads in the first place to avoid freezing the main
-        #thread, which makes the UI unresponsive.
-        foobarStatusInstance = foobarStatusDownloader(self.UI.MainWindow, self.address)
-        foobarStatusInstance.start()
+        return_data = self.fb2k.getStatus()
 
-    def currentFoobarStatusCallbackFunc(self, return_data):
         if return_data is not None:
             self.actual_song = return_data["song_name"]
-            #print "GOT DATA LEN: %s" % len(return_data)
-            #print return_data
 
             if return_data["song_name"] is not None:
                 songartist = "%s - %s" % (return_data["song_name"], return_data["artist_name"])
@@ -178,12 +159,6 @@ class UIFunctions(object):
             lyrics = self.lyricsProg.getLyrics()
             if lyrics is not None:
                 self.setLyricsText(lyrics)
-
-        else:
-            print "Connection error of some sort"
-            self.setLyricsText("There was error connecting to the foobar2000 web interface's ajquery interface at the address %s (port: %s). Please double check your settings (File -> Options) and try again." % (self.address[0], self.address[1]))
-            self.setWindowTitle("bLyrics  ::  Connection Error")
-            self.setStatusbarText("Connection Error For Server At %s:%s" % (self.address[0], self.address[1]))
 
     def hasSongChanged(self):
         if self.last_song == self.actual_song:
@@ -419,11 +394,9 @@ p, li { white-space: pre-wrap; }
         #This function allows us to set stderr and stdout to write to this function instead of the usual output.
         #That way any time a print or error occurs it will be output to this function, which will write to the console tab.
         if text.strip() != "":
-            if text != "__PROGAMINIT__":
-                timestamp = dTime.fromtimestamp(tTime()).strftime('%d/%b/%Y-%I:%M:%S %p:   ')
-                text = timestamp + text
-                self.output.append(text)
-
+            timestamp = dTime.fromtimestamp(tTime()).strftime('%d/%b/%Y-%I:%M:%S %p:   ')
+            text = timestamp + text
+            self.output.append(text)
             final_output = ""
             for entry in self.output:
                 final_output = final_output + str(entry) + "<br>"
