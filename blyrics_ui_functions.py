@@ -1,6 +1,7 @@
 import threading
 import urllib2
 import json
+import re
 from about_pane import *
 from options_dialog import *
 from manualQueryDialog import *
@@ -64,11 +65,6 @@ class foobarStatusDownloader(threading.Thread):
     def run(self):
         data = self.queryWebInterface()
 
-        #Save the old page and current selection so we can reset the interface
-        oldplaylist = data["playlistActive"]
-        oldpage = data["playlistPage"]
-        oldselection = data["focusedItem"]
-
         if data is None:
             self.MWref.emit(SIGNAL("foobarStatus"), None)
             return
@@ -85,38 +81,20 @@ class foobarStatusDownloader(threading.Thread):
 
         #Deriving the page ourselves because playlistPage is just whatever page is currently visible, not the page
         #that our song is actually on.
-        current_page = (current_song_id/int(data["playlistItemsPerPage"])) + 1
-        #Now we need to redownload the data with the proper page to be sure
-        #First make sure we're currently focused on the correct playlist
-        if data["playlistActive"] != data["playlistPlaying"]:
-            self.queryWebInterface("/ajquery/?cmd=SwitchPlaylist&&param1=%s&param3=js/state.json" % data["playlistPlaying"], noreturn=True)
-            data = self.queryWebInterface("/ajquery/?cmd=P&&param1=%s&param3=js/state.json" % str(current_page))
-        #Are we on the correct page?
-        if int(data["playlistPage"]) != current_page:
-            data = self.queryWebInterface("/ajquery/?cmd=P&&param1=%s&param3=js/state.json" % str(current_page))
-        cur_position_on_page = current_song_id - (current_page-1) * int(data["playlistItemsPerPage"])
-        current_song_name = data["playlist"][cur_position_on_page]["t"]
-        current_artist = data["playlist"][cur_position_on_page]["a"]
-        #Is it on the next page?
-        if cur_position_on_page+1 == int(data["playlistItemsPerPage"]):
-            #Get the next page
-            nextdata = self.queryWebInterface("/ajquery/?cmd=P&&param1=%s&param3=js/state.json" % str(current_page+1))
-            #Don't forget to change the page back too!
-            self.queryWebInterface("/ajquery/?cmd=P&&param1=%s&param3=js/state.json" % str(current_page), noreturn=True)
-            next_song_in_playlist = nextdata["playlist"][0]["t"] + " - " + nextdata["playlist"][0]["a"]
-        else:
+        if data["playlistActive"] == data["playlistPlaying"]:
+            current_page = (current_song_id/int(data["playlistItemsPerPage"])) + 1
+            cur_position_on_page = current_song_id - (current_page-1) * int(data["playlistItemsPerPage"])
+            current_song_name = data["playlist"][cur_position_on_page]["t"]
+            current_artist = data["playlist"][cur_position_on_page]["a"]
             try:
                 next_song_in_playlist = data["playlist"][cur_position_on_page+1]["t"] + " - " + data["playlist"][cur_position_on_page+1]["a"]
             except:
-                next_song_in_playlist = "End of Playlist"
-        #Switch the interface back to its starting configuration if we changed anything
-
-        if data["playlistActive"] != oldplaylist:
-            self.queryWebInterface("/ajquery/?cmd=SwitchPlaylist&&param1=%s&param3=js/state.json" % oldplaylist, noreturn=True)
-        if data["playlistPage"] != oldpage:
-            self.queryWebInterface("/ajquery/?cmd=P&&param1=%s&param3=js/state.json" % oldpage, noreturn=True)
-        if data["focusedItem"] != oldselection:
-            self.queryWebInterface("/ajquery/?cmd=SetFocus&&param1=%s&param3=js/state.json" % oldselection, noreturn=True)
+                next_song_in_playlist = None
+        else:
+            #Not on the correct playlist page, fall back to less reliable helperi fields
+            current_song_name = re.match("^(.*?) - $", data["helper1"]).group(1)
+            current_artist = re.match("(.*?) - %s" % current_song_name, data["helper2"]).group(1)
+            next_song_in_playlist = None
 
         return_data = {}
         return_data["isplaying"] = isplaying
@@ -171,17 +149,23 @@ class UIFunctions(object):
             self.actual_song = return_data["song_name"]
             #print "GOT DATA LEN: %s" % len(return_data)
             #print return_data
+
+            if return_data["song_name"] is not None:
+                songartist = "%s - %s" % (return_data["song_name"], return_data["artist_name"])
+            else:
+                songartist = self.last_song
+
             #Status bar update
-            if int(return_data["playback_mode"]) == 0:
+            if int(return_data["playback_mode"]) == 0 and return_data["next_song_in_playlist"] is not None:
                 songinfotxt = "Next Song: %s" % return_data["next_song_in_playlist"]
             else:
-                songinfotxt = "Current Song: %s - %s" % (return_data["song_name"], return_data["artist_name"])
+                songinfotxt = "Current Song: %s" % songartist
             self.setStatusbarText("%s" % songinfotxt)
             #Window title update
             if int(return_data["isplaying"]) or int(return_data["ispaused"]):
-                self.setWindowTitle("bLyrics  ::  %s  ::  %s - %s" % (["Playing","Paused"][int(return_data["ispaused"])], return_data["song_name"], return_data["artist_name"]))
+                self.setWindowTitle("bLyrics  ::  %s  ::  %s" % (["Playing","Paused"][int(return_data["ispaused"])], songartist))
             else:
-                self.setWindowTitle("bLyrics  ::  Stopped  ::  %s - %s" % (return_data["song_name"], return_data["artist_name"]))
+                self.setWindowTitle("bLyrics  ::  Stopped  ::  %s" % songartist)
 
 
             #Finally update the lyrics. Our manual and search modes really make this more complicated that it should be.
