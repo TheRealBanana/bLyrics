@@ -64,6 +64,11 @@ class foobarStatusDownloader(threading.Thread):
     def run(self):
         data = self.queryWebInterface()
 
+        #Save the old page and current selection so we can reset the interface
+        oldplaylist = data["playlistActive"]
+        oldpage = data["playlistPage"]
+        oldselection = data["focusedItem"]
+
         if data is None:
             self.MWref.emit(SIGNAL("foobarStatus"), None)
             return
@@ -96,7 +101,15 @@ class foobarStatusDownloader(threading.Thread):
             self.queryWebInterface("/ajquery/?cmd=P&&param1=%s&param3=js/state.json" % str(current_page), noreturn=True)
             next_song_in_playlist = nextdata["playlist"][0]["t"] + " - " + nextdata["playlist"][0]["a"]
         else:
-            next_song_in_playlist = data["playlist"][cur_position_on_page+1]["t"] + " - " + data["playlist"][cur_position_on_page+1]["a"]
+            try:
+                next_song_in_playlist = data["playlist"][cur_position_on_page+1]["t"] + " - " + data["playlist"][cur_position_on_page+1]["a"]
+            except:
+                next_song_in_playlist = "End of Playlist"
+        #Switch the interface back to its starting configuration
+        self.queryWebInterface("/ajquery/?cmd=SwitchPlaylist&&param1=%s&param3=js/state.json" % oldplaylist, noreturn=True)
+        self.queryWebInterface("/ajquery/?cmd=P&&param1=%s&param3=js/state.json" % oldpage, noreturn=True)
+        self.queryWebInterface("/ajquery/?cmd=SetFocus&&param1=%s&param3=js/state.json" % oldselection, noreturn=True)
+
         return_data = {}
         return_data["isplaying"] = isplaying
         return_data["ispaused"] = ispaused

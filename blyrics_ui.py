@@ -156,7 +156,7 @@ class Ui_MainWindow(object):
         #Build help menu
         self.menuHelp.addAction(self.aboutMenuItem)
 
-        self.retranslateUi(MainWindow)
+        self.retranslateUi()
         self.tabWidget.setCurrentIndex(1)   #This sets the default tab, starting from 0 = current status tab, 1 = lyrics tab, and 2 = console
 
         #Load up settings the user saved such as window position, web interface url, debug mode, etc
@@ -190,7 +190,7 @@ class Ui_MainWindow(object):
         #And now we just manually execute the check_song_loop ourselves the first time instead of waiting 5s for the first iteration of the timer to finish.
         self.UiFunctions.mainAppLoop()
 
-    def retranslateUi(self, MainWindow):
+    def retranslateUi(self):
         self.UiFunctions.setWindowTitle("bLyrics  ::  Not Connected")
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.MainTab), _translate("MainWindow", "Current Status", None))
         self.RefreshLyricsButton.setText(_translate("MainWindow", "Refresh", None))

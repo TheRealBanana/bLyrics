@@ -13,7 +13,13 @@ from os import path
 from os import sep as ossep
 from suds.client import Client
 from difflib import SequenceMatcher as sMatcher
+from PyQt4 import QtCore
 
+try:
+    _fromUtf8 = QtCore.QString.fromUtf8
+except AttributeError:
+    def _fromUtf8(s):
+        return s
 
 #This is the master probability value used to determine if a match has been found or not
 #Anything over 0.6 is considered a good match but sometimes on titles that are very similar a higher ratio is required.
@@ -33,6 +39,10 @@ socket.setdefaulttimeout(30)
 #Works on strings and tuples. Recurses only with tuples that have more than one backslash escaping the parenthesis (hasn't happened but it could).
 def _pUnescape(ostring):
     fstring = "pUnescape Error"
+    #First lets try and encode this with utf-8
+    #ostring = ostring.encode('utf-8')
+    ostring = unicode(ostring)
+
     if isinstance(ostring, basestring):
         fstring = ostring
         while re.search("(\\\\[()])", fstring) is not None:
@@ -160,8 +170,10 @@ class lyricswikiObj(object):
             #songLyrics = None
         except Exception as e:
             songLyrics = None
+            """
             print "Wikia failed with following error:"
             print e
+            """
         #songLyrics = None
         if songLyrics is None:
             self._DEBUG("mainGL: Previous function returned None, getting lyrics from songlyrics_getLyrics()")
@@ -283,7 +295,8 @@ class lyricswikiObj(object):
         surl = "http://www.songlyrics.com/index.php?section=search&searchW=%s"
         
         #First thing we are going to do is whip up a proper url with our search query in it
-        query_data = urllib.quote_plus(_pUnescape(artist) + " " + _pUnescape(song))
+        quotestr = _pUnescape(artist) + " " + _pUnescape(song)
+        query_data = urllib.quote_plus(quotestr.encode("utf8"))
         queryurl = surl % (query_data)
         
         #Now lets execute the search and get the html returned so we can work on it
@@ -292,7 +305,6 @@ class lyricswikiObj(object):
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         "Accept-Language": "en-US,en;q=0.5",
         "Accept-Encoding": "deflate",
-        "Cookie": "YWP_VOLUME=0.5; ywadp10001467053656=1371487762; ywadp1000255860556=3770811279; __cfduid=d0dd12f0e5d2095f5a8c9f9e1728be3db1475024653; PHPSESSID=63lfj2s85v8clhbnrdrvph73q1",
         "DNT": "1",
         "Connection": "keep-alive",
         "Upgrade-Insecure-Requests": "1"
