@@ -78,7 +78,6 @@ class lyricswikiObj(object):
     def searchForLyrics(self, artist="", song=""):
         self.manual_mode["manual"] = True
         self.manual_mode["song_at_set"] = self.song
-        results = ""
         #Only search when we have something to match for the song. No artist-only searches.
         if len(song) > 1:
             self.Lyrics = self._getLyrics(artist, song, search_mode=True)
@@ -129,7 +128,7 @@ class lyricswikiObj(object):
             if self.manual_mode["search_mode"] is False:
                 return None
 
-        if self.manual_mode["search_mode"] == True:
+        if self.manual_mode["search_mode"] is True:
             #We clicked on a result
             print "2"
         if self.context.hasSongChanged() is True:
@@ -294,7 +293,7 @@ class lyricswikiObj(object):
         #First thing we are going to do is whip up a proper url with our search query in it
         quotestr = _pUnescape(artist) + " " + _pUnescape(song)
         query_data = urllib.quote_plus(quotestr.encode("utf8"))
-        queryurl = surl % (query_data)
+        queryurl = surl % query_data
         
         #Now lets execute the search and get the html returned so we can work on it
         downloaderHeaders = {
@@ -329,7 +328,7 @@ class lyricswikiObj(object):
         self._DEBUG("QUERY URL: " + queryurl)
         self._DEBUG("-------------------")
         
-        self._DEBUG(search_html, True, "raw_search_html-%s.html" % (clean_song))
+        self._DEBUG(search_html, True, "raw_search_html-%s.html" % clean_song)
         if url is None:
             #Now we need to find the url for the right song in this mess of HTML
             #Lucky for us the title of each song is listed in an href tag and makes the job much easier
@@ -340,9 +339,9 @@ class lyricswikiObj(object):
                 
                 self._DEBUG("lwDBG B"); lwdbgstage = "B"
                 
-                self._DEBUG(refined_results, True, "refined_results-%s.html" % (clean_song))
+                self._DEBUG(refined_results, True, "refined_results-%s.html" % clean_song)
                 #And now we look for the title of our song in the results. This is where it will fail most of the time. We need to find a different way to search the song name without being so rigid.
-                refined_results = re.search("title=\"%s\"(.*?)<div class=\"serpresult\">" % (song), refined_results, re.S|re.I).group(1)
+                refined_results = re.search("title=\"%s\"(.*?)<div class=\"serpresult\">" % song, refined_results, re.S|re.I).group(1)
                 
                 self._DEBUG("lwDBG C"); lwdbgstage = "C"
                 #And finally we extract the url to the lyrics from the refined results
@@ -370,7 +369,7 @@ class lyricswikiObj(object):
         lyrics_html = lyrics_query.read()
         lyrics_query.close()
         
-        self._DEBUG(lyrics_html, True, "raw_lyrics_html-%s.html" % (clean_song))
+        self._DEBUG(lyrics_html, True, "raw_lyrics_html-%s.html" % clean_song)
         
         #Now we cut out just the lyrics, unfortunately they appaeared to be garbled just like lyricswiki does to their songs
         #This is easy enough to fix ofc using HTMLParser
@@ -453,8 +452,8 @@ class lyricswikiObj(object):
         self._DEBUG("a5 P4")
         return None
     
-    
-    def sanitize(self, input_text):
+    @staticmethod
+    def sanitize(input_text):
         '''This function replaces certain non-ascii characters with workable ascii counterparts'''
         if isinstance(input_text, str):
             input_text = input_text.replace("\xe2\x80\x99", "'")  #RIGHT SINGLE QUOTATION MARK
@@ -470,8 +469,8 @@ class lyricswikiObj(object):
         return input_text
 
 
-    
-    def _DEBUG(self, msg, write=False, filen=None):
+    @staticmethod
+    def _DEBUG(msg, write=False, filen=None):
         if _DEBUG_MODE:
             if write:
                 if _DBGWRITE:

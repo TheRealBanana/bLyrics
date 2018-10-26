@@ -1,4 +1,3 @@
-import threading
 import urllib2
 import json
 import re
@@ -31,7 +30,7 @@ except AttributeError:
         return QtGui.QApplication.translate(context, text, disambig)
 
 #Downloads the current song/artist/playmode from foobar's ajquery web interface
-class foobarStatusDownloader():
+class foobarStatusDownloader(object):
     def __init__(self, MWref, hostnameandport):
         self.MWref = MWref
         self.address = hostnameandport[0]
@@ -45,7 +44,7 @@ class foobarStatusDownloader():
             rawjson = page.read()
             page.close()
             data = json.loads(rawjson)
-        except Exception as e:
+        except:
             return None
         return data
 
@@ -80,8 +79,14 @@ class foobarStatusDownloader():
                 next_song_in_playlist = None
         else:
             #Not on the correct playlist page, fall back to less reliable helperi fields
-            current_song_name = re.match("^(.*?) - $", data["helper1"]).group(1)
-            current_artist = re.match("(.*?) - %s" % current_song_name, data["helper2"]).group(1)
+            try:
+                current_song_name = re.match("^(.*?) - $", data["helper1"]).group(1)
+            except:
+                return None
+            try:
+                current_artist = re.match("(.*?) - %s" % current_song_name, data["helper2"]).group(1)
+            except:
+                return None
             next_song_in_playlist = None
 
         return_data = {}
@@ -188,7 +193,7 @@ class UIFunctions(object):
         widget.setWindowIcon(QtGui.QIcon(":/icon/bLyrics.ico"))
         widget.exec_()
         #change to normal python strings
-        if return_data != []:
+        if len(return_data) > 0:
             return_data = [str(z) for z in return_data]
 
         #Now we get the first page of results in the form of a list where each item is a dictionary with three parts: Artist, Song Title, and URL.
@@ -234,7 +239,7 @@ class UIFunctions(object):
         #change to normal python strings
         return_data = [str(z) for z in return_data]
         #Now we need to let fooBarLyrics.py know we have a manual query so it doesnt just change the song back when it senses the change
-        if return_data != []:
+        if len(return_data) > 0:
             self.lyricsProg.manual_song_set(return_data)
             #Now force the mainUI to update
             self.mainAppLoop()
@@ -359,7 +364,7 @@ class UIFunctions(object):
 
         #First we set the status page url with the given info.
         #Credentials
-        if options["fb2kServerInfo"][2] == True: self.webStatus_URL += "%s:%s@" % (options["fb2kServerInfo"][3], options["fb2kServerInfo"][4])
+        if options["fb2kServerInfo"][2] is True: self.webStatus_URL += "%s:%s@" % (options["fb2kServerInfo"][3], options["fb2kServerInfo"][4])
         #IP and port
         self.webStatus_URL += "%s:%s/ajquery/index.html" % (options["fb2kServerInfo"][0], options["fb2kServerInfo"][1])
 
@@ -407,7 +412,7 @@ p, li { white-space: pre-wrap; }
 p, li { white-space: pre-wrap; }
 </style></head><body style=" font-family:\'MS Shell Dlg 2\'; font-size:8.25pt; font-weight:400; font-style:normal;">
 <p style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;">%s</p></body></html>
-''' % (final_output)
+''' % final_output
             self.UI.consoleOutput.setHtml(_translate("MainWindow", html, None))
 
     def setWindowTitle(self, text):

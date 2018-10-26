@@ -372,7 +372,7 @@ class Ui_OptionsDialog(object):
 
         self.OptionsDialog = OptionsDialog
 
-    def uncheckDbgWrite(self, toggledstate):
+    def uncheckDbgWrite(self, _):
         checkstate = self.debugWriteCheck.isChecked()
         if checkstate is True:
             self.debugWriteCheck.setChecked(0)
@@ -385,8 +385,8 @@ class Ui_OptionsDialog(object):
         self.fontSelection = "Tahoma, 8"
         self.bgColorSelector.currentColor = "#FFFFFF"
         self.fgColorSelector.currentColor = "#000000"
-        self.bgColorSelector.setStyleSheet(_fromUtf8("background-color: %s;" % (self.bgColorSelector.currentColor)))
-        self.fgColorSelector.setStyleSheet(_fromUtf8("background-color: %s;" % (self.fgColorSelector.currentColor)))
+        self.bgColorSelector.setStyleSheet(_fromUtf8("background-color: %s;" % self.bgColorSelector.currentColor))
+        self.fgColorSelector.setStyleSheet(_fromUtf8("background-color: %s;" % self.fgColorSelector.currentColor))
         self.fontPreviewBox.setStyleSheet(_fromUtf8("color: rgb(0, 0, 0); font: 8pt \"Tahoma\"; background-color: rgb(255, 255, 255);"))
 
 
@@ -499,7 +499,7 @@ class Ui_OptionsDialog(object):
 
 
         #If this data was requested by something else we return the data
-        if external == True:
+        if external is True:
             return returnData
 
         #And now we set up the options UI with the correct options
@@ -584,13 +584,13 @@ class Ui_OptionsDialog(object):
     def selectBgColor(self):
         bgColor = self.colorPopup(self.bgColorSelector.currentColor)
         self.bgColorSelector.currentColor = bgColor
-        self.bgColorSelector.setStyleSheet(_fromUtf8("background-color: %s;" % (bgColor)))
+        self.bgColorSelector.setStyleSheet(_fromUtf8("background-color: %s;" % bgColor))
         self.updatePreviewBoxCSS()
 
     def selectFgColor(self):
         fgColor = self.colorPopup(self.fgColorSelector.currentColor)
         self.fgColorSelector.currentColor = fgColor
-        self.fgColorSelector.setStyleSheet(_fromUtf8("background-color: %s;" % (fgColor)))
+        self.fgColorSelector.setStyleSheet(_fromUtf8("background-color: %s;" % fgColor))
         self.updatePreviewBoxCSS()
 
     def forceColorDialogOnTop(self):

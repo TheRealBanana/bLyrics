@@ -36,7 +36,6 @@ class OUTMETHODS(object):
 
 
 if __name__ == "__main__":
-    global _ALWAYS_ON_TOP_
     app = QtGui.QApplication(sys.argv)
     MainWindow = QtGui.QMainWindow()
     ui = Ui_MainWindow(MainWindow)
