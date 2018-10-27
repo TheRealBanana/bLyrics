@@ -78,16 +78,13 @@ class foobarStatusDownloader(object):
             except:
                 next_song_in_playlist = None
         else:
-            #Not on the correct playlist page, fall back to less reliable helperi fields
-            try:
-                current_song_name = re.match("^(.*?) - $", data["helper1"]).group(1)
-            except:
+            if len(data["helper1"]) > 0:
+                #Not on the correct playlist page, fall back to less reliable helperi fields
+                current_song_name = re.match("^(.*) - $", data["helper1"]).group(1)
+                current_artist = re.search("(.*) - %s" % re.escape(current_song_name), data["helper2"]).group(1)
+                next_song_in_playlist = None
+            else:
                 return None
-            try:
-                current_artist = re.match("(.*?) - %s" % current_song_name, data["helper2"]).group(1)
-            except:
-                return None
-            next_song_in_playlist = None
 
         return_data = {}
         return_data["isplaying"] = isplaying
