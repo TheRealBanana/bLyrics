@@ -49,7 +49,6 @@ class Ui_MainWindow(object):
         self.gridLayout_2 = QtGui.QGridLayout(self.MainTab)
         self.gridLayout_2.setObjectName(_fromUtf8("gridLayout_2"))
         self.MainStatusWebView = QtWebKit.QWebView(self.MainTab)
-        #self.MainStatusWebView.setUrl(QtCore.QUrl(_fromUtf8("http://127.0.0.1:8888/ajquery/index.html")))  #This is going to change to custom HTML page that says to adjust the options
         self.MainStatusWebView.setObjectName(_fromUtf8("MainStatusWebView"))
         self.gridLayout_2.addWidget(self.MainStatusWebView, 0, 0, 1, 1)
         self.tabWidget.addTab(self.MainTab, _fromUtf8(""))
@@ -174,7 +173,6 @@ class Ui_MainWindow(object):
         QtCore.QObject.connect(self.actionSearch, QtCore.SIGNAL(_fromUtf8("triggered()")), self.UiFunctions.openSearchDialog)
         QtCore.QObject.connect(self.consoleO_ClearButton, QtCore.SIGNAL(_fromUtf8("clicked()")), self.UiFunctions.clear_console)
         QtCore.QObject.connect(self.lyricsTextView, QtCore.SIGNAL(_fromUtf8("anchorClicked(QUrl)")), self.UiFunctions.setSearchResult)
-        #QtCore.QObject.connect(self.MainWindow, SIGNAL("updateLyrics"), self.UiFunctions.setLyricsText)
         QtCore.QMetaObject.connectSlotsByName(self.MainWindow)
 
         #Tell the user we're not connected
