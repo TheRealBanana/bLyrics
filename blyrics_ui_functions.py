@@ -63,8 +63,11 @@ class foobarStatusDownloader(object):
         if isplaying or ispaused:
             current_song_id = int(data["playingItem"])
         else:
-            #Currently stopped so use the focused item instead
-            current_song_id = int(data["focusedItem"])
+            #Currently stopped so try and use either the last playing song or the currently focused item
+            if len(data["prevplayedItem"]) > 0:
+                current_song_id = data["prevplayedItem"]
+            else:
+                current_song_id = int(data["focusedItem"])
 
         #Deriving the page ourselves because playlistPage is just whatever page is currently visible, not the page
         #that our song is actually on.
@@ -151,7 +154,7 @@ class UIFunctions(object):
                 self.setWindowTitle("bLyrics  ::  Stopped  ::  %s" % songartist)
 
 
-            #Finally update the lyrics. Our manual and search modes really make this more complicated that it should be.
+            #Finally update the lyrics. Our manual and search modes really make this more complicated than it should be.
             if self.lyricsProg.manual_mode["manual"] is True:
                 if self.lyricsProg.manual_mode["song_at_set"] != self.actual_song:
                     self.lyricsProg.manual_mode["man"] = False
