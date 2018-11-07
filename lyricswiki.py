@@ -14,6 +14,7 @@ from os import sep as ossep
 from suds.client import Client
 from difflib import SequenceMatcher as sMatcher
 from PyQt4 import QtCore
+from lyrics_cacher import LyricsCacher
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -39,10 +40,6 @@ socket.setdefaulttimeout(30)
 #Works on strings and tuples. Recurses only with tuples that have more than one backslash escaping the parenthesis (hasn't happened but it could).
 def _pUnescape(ostring):
     fstring = "pUnescape Error"
-    #First lets try and encode this with utf-8
-    #ostring = ostring.encode('utf-8')
-    ostring = unicode(ostring)
-
     if isinstance(ostring, basestring):
         fstring = ostring
         while re.search("(\\\\[()])", fstring) is not None:
@@ -68,10 +65,9 @@ class lyricswikiObj(object):
         self.searching = False
         self.last_return = [None, None]
         self.manual_mode = {"manual": False, "song": "", "artist": "", "song_at_set": "", "search_mode": False, "search_url": ""}
+        self.songCache = LyricsCacher()
 
     def update_current_track(self, song, artist):
-        if self.song == "Eulogy" and song == "Thought Contagion":
-            raise Exception("HERE WE GO AGAIN")
         self.song = song
         self.artist = artist
 
@@ -80,7 +76,7 @@ class lyricswikiObj(object):
         self.manual_mode["song_at_set"] = self.song
         #Only search when we have something to match for the song. No artist-only searches.
         if len(song) > 1:
-            self.Lyrics = self._getLyrics(artist, song, search_mode=True)
+            self.Lyrics = self._getLyrics(song, artist, search_mode=True)
         return self.Lyrics
 
     def resetManualEntry(self):
@@ -132,9 +128,15 @@ class lyricswikiObj(object):
             #We clicked on a result
             print "2"
         if self.context.hasSongChanged() is True:
-            self.Lyrics = self._getLyrics(self.artist, self.song, manual_mode=self.manual_mode["manual"])
-            self.last_return = [self.song, self.artist]
-            return self.Lyrics
+        #Check if we have this song cached
+            if self.songCache.checkSong(self.song, self.artist) is True:
+                print "Returned cached lyrics for '%s' by %s" % (self.song, self.artist)
+                return self.songCache.getLyrics(self.song, self.artist)
+            else:
+                self.Lyrics = self._getLyrics(self.song, self.artist, manual_mode=self.manual_mode["manual"])
+                self.last_return = [self.song, self.artist]
+                self.songCache.saveLyrics(self.song, self.artist, self.Lyrics)
+                return self.Lyrics
         else:
             return None
 
@@ -148,7 +150,7 @@ class lyricswikiObj(object):
         _DBGWRITEFOLDER = options["debugOutputFolder"]
 
     #Yeah thats ugly, tacking on a _ onto the beginning.... Fite me...
-    def _getLyrics(self, artist, song, manual_mode=False, search_mode=False, search_url=None):
+    def _getLyrics(self, song, artist, manual_mode=False, search_mode=False, search_url=None):
         if search_mode is True:
             search_results = self.songlyrics_getLyrics(artist, song, search_mode=True)
             return search_results
@@ -160,9 +162,8 @@ class lyricswikiObj(object):
 
         #We'll try both the wikia and songlyrics.com functions before we give up
         self._DEBUG("mainGL: Getting lyrics from wikia_getLyrics()")
-        #Something went majorly wrong with wikia, have to fallback to songlyrics.com for now --  started working again, but leaving this comment here just in case
         try:
-            songLyrics = self.wikia_getLyrics(artist, song)
+            songLyrics = self.wikia_getLyrics(song, artist)
             #songLyrics = None
         except Exception as e:
             songLyrics = None
@@ -183,7 +184,7 @@ class lyricswikiObj(object):
         return songLyrics
     
 
-    def wikia_getLyrics(self, artist, song):
+    def wikia_getLyrics(self, song, artist):
         self._DEBUG("lwoGlDBG 1: START")
         #Check if we've been given an empty song or artist
         if artist is None or song is None:
@@ -292,7 +293,7 @@ class lyricswikiObj(object):
         
         #First thing we are going to do is whip up a proper url with our search query in it
         quotestr = _pUnescape(artist) + " " + _pUnescape(song)
-        query_data = urllib.quote_plus(quotestr.encode("utf8"))
+        query_data = urllib.quote_plus(quotestr)
         queryurl = surl % query_data
         
         #Now lets execute the search and get the html returned so we can work on it

@@ -125,6 +125,9 @@ class Ui_MainWindow(object):
         self.actionOptions = QtGui.QAction(self.MainWindow)
         self.actionOptions.setObjectName(_fromUtf8("actionOptions"))
 
+        self.actionClearLyricsCache = QtGui.QAction(self.MainWindow)
+        self.actionClearLyricsCache.setObjectName(_fromUtf8("actionClearLyricsCache"))
+
         #Create submenu
         self.subMenu = QtGui.QMenu(self.menuFile)
         self.subMenu.setObjectName(_fromUtf8("subMenu"))
@@ -147,6 +150,7 @@ class Ui_MainWindow(object):
         self.menuFile.addAction(self.actionRefresh)
         self.menuFile.addSeparator()
         self.menuFile.addAction(self.actionOptions)
+        self.menuFile.addAction(self.actionClearLyricsCache)
         self.menuFile.addSeparator()
         self.menuFile.addAction(self.subMenu.menuAction())
         self.menuFile.addSeparator()
@@ -168,6 +172,7 @@ class Ui_MainWindow(object):
         QtCore.QObject.connect(self.actionQuit, QtCore.SIGNAL(_fromUtf8("triggered()")), self.MainWindow.close)
         QtCore.QObject.connect(self.actionRefresh, QtCore.SIGNAL(_fromUtf8("triggered()")), self.UiFunctions.mainAppLoop)
         QtCore.QObject.connect(self.actionOptions, QtCore.SIGNAL(_fromUtf8("triggered()")), self.UiFunctions.openOptionsWindow)
+        QtCore.QObject.connect(self.actionClearLyricsCache, QtCore.SIGNAL(_fromUtf8("triggered()")), self.UiFunctions.clearLyricsCacheAction)
         QtCore.QObject.connect(self.actionManualQuery, QtCore.SIGNAL(_fromUtf8("triggered()")), self.UiFunctions.openManualQueryDialog)
         QtCore.QObject.connect(self.actionResetManualQuery, QtCore.SIGNAL(_fromUtf8("triggered()")), self.UiFunctions.resetManualEntry)
         QtCore.QObject.connect(self.actionSearch, QtCore.SIGNAL(_fromUtf8("triggered()")), self.UiFunctions.openSearchDialog)
@@ -208,6 +213,7 @@ class Ui_MainWindow(object):
         self.actionQuit.setText(_translate("MainWindow", "Quit", None))
         self.actionRefresh.setText(_translate("MainWindow", "Refresh Lyrics", None))
         self.actionOptions.setText(_translate("MainWindow", "Options", None))
+        self.actionClearLyricsCache.setText(_translate("MainWindow", "Clear Lyrics Cache", None))
         self.actionManualQuery.setText(_translate("MainWindow", "Set song manually", None))
         self.actionResetManualQuery.setText(_translate("MainWindow", "Reset manual song", None))
         self.actionSearch.setText(_translate("MainWindow", "Search for lyrics", None))

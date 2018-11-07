@@ -65,7 +65,7 @@ class foobarStatusDownloader(object):
         else:
             #Currently stopped so try and use either the last playing song or the currently focused item
             if len(data["prevplayedItem"]) > 0:
-                current_song_id = data["prevplayedItem"]
+                current_song_id = int(data["prevplayedItem"])
             else:
                 current_song_id = int(data["focusedItem"])
 
@@ -93,8 +93,8 @@ class foobarStatusDownloader(object):
         return_data["isplaying"] = isplaying
         return_data["ispaused"] = ispaused
         return_data["playback_mode"] = playback_mode
-        return_data["song_name"] = current_song_name
-        return_data["artist_name"] = current_artist
+        return_data["song_name"] = current_song_name.encode("utf8")
+        return_data["artist_name"] = current_artist.encode("utf8")
         return_data["next_song_in_playlist"] = next_song_in_playlist
         return return_data
 
@@ -440,4 +440,9 @@ p, li { white-space: pre-wrap; }
         if text is not None and len(text) > 0:
             self.UI.Statusbar.setText(_translate("MainWindow", text, None))
 
-
+    def clearLyricsCacheAction(self):
+        #U sure?
+        if QtGui.QMessageBox.question(self.UI.MainWindow, "Clear Lyrics Cache?", "<p align='center'>Are you sure you want to remove all cached lyrics?<br>(This cannot be undone)</p>", QtGui.QMessageBox.Yes, QtGui.QMessageBox.No) == QtGui.QMessageBox.Yes:
+            numfiles = self.lyricsProg.songCache.clearLyricsCache()
+            QtGui.QMessageBox.information(self.UI.MainWindow, "Cached Cleared!", "Successfully cleared %s cached lyrics files!" % numfiles)
+            print "Removed %d cached lyrics" % numfiles
