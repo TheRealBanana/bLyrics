@@ -1,8 +1,9 @@
 # -*- mode: python -*-
 from os import getcwd
+from os.path import abspath
 _CURDIR = getcwd()
 
-a = Analysis(['bLyrics2.pyw'],
+a = Analysis(['../bLyrics2.pyw'],
              pathex=[_CURDIR],
              hiddenimports=[],
              hookspath=None,
@@ -18,4 +19,4 @@ exe = EXE(pyz,
           strip=None,
           upx=False,
           console=False,
-          icon='icon/bLyrics.ico')
+          icon='../icon/bLyrics.ico')
