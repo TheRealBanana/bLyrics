@@ -130,18 +130,22 @@ class lyricswikiObj(object):
         if self.context.hasSongChanged() is True:
         #Check if we have this song cached
             if self.songCache.checkSong(self.song, self.artist) is True:
-                print "Returned cached lyrics for '%s' by %s" % (self.song, self.artist)
-                return self.songCache.getLyrics(self.song, self.artist)
-            else:
-                self.Lyrics = self._getLyrics(self.song, self.artist, manual_mode=self.manual_mode["manual"])
-                self.last_return = [self.song, self.artist]
-                self.songCache.saveLyrics(self.song, self.artist, self.Lyrics)
-                return self.Lyrics
+                cachedlyrics = self.songCache.getLyrics(self.song, self.artist)
+                if len(cachedlyrics) > 0:
+                    print "Returned cached lyrics for '%s' by %s" % (self.song, self.artist)
+                    return cachedlyrics
+                else:
+                    print "Zero length lyrics cache file, trying to grab fresh lyrics..."
+            #We either dont have it cached or the cached lyrics were empty
+            self.Lyrics = self._getLyrics(self.song, self.artist, manual_mode=self.manual_mode["manual"]).encode("utf8")
+            self.last_return = [self.song, self.artist]
+            self.songCache.saveLyrics(self.song, self.artist, self.Lyrics)
+            return self.Lyrics
         else:
             return None
 
-
-    def setInternalOptions(self, options):    
+    @staticmethod
+    def setInternalOptions(options):
         global _MASTER_RATIO, _DBGWRITE, _DEBUG_MODE, _DBGWRITEFOLDER    
         #Set the options    
         _MASTER_RATIO = float(options["masterMatchRatio"])

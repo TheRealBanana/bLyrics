@@ -131,6 +131,7 @@ class UIFunctions(object):
     #This timer is executed every 5 seconds, ostensibly to check whether our song has changed or not but
     #its evolved to do quite a bit more over time. Hopefully I can cut out the cruft.
     def mainAppLoop(self):
+
         return_data = self.fb2k.getStatus()
 
         if return_data is not None:
@@ -163,6 +164,7 @@ class UIFunctions(object):
                 self.lyricsProg.update_current_track(return_data["song_name"], return_data["artist_name"])
             lyrics = self.lyricsProg.getLyrics()
             if lyrics is not None:
+                self.resetEditLyricsState()
                 self.setLyricsText(lyrics)
 
     def hasSongChanged(self):
@@ -446,3 +448,45 @@ p, li { white-space: pre-wrap; }
             numfiles = self.lyricsProg.songCache.clearLyricsCache()
             QtGui.QMessageBox.information(self.UI.MainWindow, "Cached Cleared!", "Successfully cleared %s cached lyrics files!" % numfiles)
             print "Removed %d cached lyrics" % numfiles
+
+    def refreshLyricsButtonAction(self):
+        self.last_song = None
+        self.mainAppLoop()
+
+    def editLyricsButtonAction(self):
+        self.UI.lyricsTextView.setReadOnly(False)
+        self.UI.lyricsTextView.setFocus()
+        self.UI.lyricsTextView.selectAll()
+
+        #Repurpose our old refresh and edit buttons into save and cancel buttons
+        QtCore.QObject.disconnect(self.UI.RefreshLyricsButton, QtCore.SIGNAL(_fromUtf8("clicked()")), self.refreshLyricsButtonAction)
+        QtCore.QObject.disconnect(self.UI.editLyricsButton, QtCore.SIGNAL(_fromUtf8("clicked()")), self.editLyricsButtonAction)
+        self.UI.RefreshLyricsButton.setText("Save")
+        QtCore.QObject.connect(self.UI.RefreshLyricsButton, QtCore.SIGNAL(_fromUtf8("clicked()")), self.saveEditedLyrics)
+        self.UI.editLyricsButton.setText("Cancel")
+        QtCore.QObject.connect(self.UI.editLyricsButton, QtCore.SIGNAL(_fromUtf8("clicked()")), self.resetEditLyricsState)
+
+    def saveEditedLyrics(self):
+        newlyrics = unicode(self.UI.lyricsTextView.toPlainText())
+        #If we get a blank page (i.e. no lyrics) we reacquire lyrics from online sources
+        #If the user really wants to have no lyrics (blank page) they can put a space or line break.
+        self.lyricsProg.songCache.saveLyrics(self.lyricsProg.song, self.lyricsProg.artist, newlyrics.encode("utf8"))
+        self.resetEditLyricsState()
+        self.refreshLyricsButtonAction()
+
+    def resetEditLyricsState(self):
+        #Undo everything done by editLyricsButtonAction()
+        if not self.UI.lyricsTextView.isReadOnly():
+            #Deselect any text and move cursor to the top
+            cursor = self.UI.lyricsTextView.textCursor()
+            cursor.clearSelection()
+            cursor.movePosition(QtGui.QTextCursor.Start)
+            self.UI.lyricsTextView.setTextCursor(cursor)
+            self.UI.lyricsTextView.setReadOnly(True)
+            #Repurpose our old refresh and edit buttons into save and cancel buttons
+            QtCore.QObject.disconnect(self.UI.RefreshLyricsButton, QtCore.SIGNAL(_fromUtf8("clicked()")), self.saveEditedLyrics)
+            QtCore.QObject.disconnect(self.UI.editLyricsButton, QtCore.SIGNAL(_fromUtf8("clicked()")), self.resetEditLyricsState)
+            self.UI.RefreshLyricsButton.setText("Refresh")
+            QtCore.QObject.connect(self.UI.RefreshLyricsButton, QtCore.SIGNAL(_fromUtf8("clicked()")), self.refreshLyricsButtonAction)
+            self.UI.editLyricsButton.setText("Edit")
+            QtCore.QObject.connect(self.UI.editLyricsButton, QtCore.SIGNAL(_fromUtf8("clicked()")), self.editLyricsButtonAction)

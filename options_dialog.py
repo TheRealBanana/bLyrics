@@ -413,7 +413,7 @@ class Ui_OptionsDialog(object):
 
     def saveOptions(self):
         #Ok we need to save everything from all three pages and pack that into a list of three dictionaries. Simple!
-        #Just go over each page one by one, page one has nothing as of yet so its not here
+        #Just go over each page one by one.
 
         #Page One
         p1 = {}

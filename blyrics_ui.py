@@ -8,7 +8,9 @@
 
 
 from blyrics_ui_functions import *
-from PyQt4 import QtCore, QtGui
+from PyQt4 import QtGui
+from PyQt4 import QtWebKit
+from icon_resource_rc import *
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -59,15 +61,21 @@ class Ui_MainWindow(object):
         ######
         self.gridLayout_3 = QtGui.QGridLayout(self.LyricsTab)
         self.gridLayout_3.setObjectName(_fromUtf8("gridLayout_3"))
-        self.lyricsTextView = QtGui.QTextBrowser(self.LyricsTab)
+        self.lyricsTextView = QtGui.QTextEdit(self.LyricsTab)
         self.lyricsTextView.setObjectName(_fromUtf8("lyricsTextView"))
-        #self.lyricsTextView.setContextMenuPolicy(QtCore.Qt.NoContextMenu)   # Disables context menu in lyrics box. Users can still ctrl+c
-        self.gridLayout_3.addWidget(self.lyricsTextView, 0, 0, 1, 2)
+        self.lyricsTextView.setReadOnly(True)
+        self.gridLayout_3.addWidget(self.lyricsTextView, 0, 0, 1, 3)
+        spacerItem = QtGui.QSpacerItem(433, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
+        self.gridLayout_3.addItem(spacerItem, 1, 2, 1, 1)
         self.RefreshLyricsButton = QtGui.QPushButton(self.LyricsTab)
         self.RefreshLyricsButton.setObjectName(_fromUtf8("RefreshLyricsButton"))
         self.gridLayout_3.addWidget(self.RefreshLyricsButton, 1, 0, 1, 1)
-        spacerItem = QtGui.QSpacerItem(433, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
-        self.gridLayout_3.addItem(spacerItem, 1, 1, 1, 1)
+        self.editLyricsButton = QtGui.QPushButton(self.LyricsTab)
+        self.editLyricsButton.setObjectName(_fromUtf8("editLyricsButton"))
+        self.gridLayout_3.addWidget(self.editLyricsButton, 1, 1, 1, 1)
+        self.RefreshLyricsButton.raise_()
+        self.lyricsTextView.raise_()
+        self.editLyricsButton.raise_()
         self.tabWidget.addTab(self.LyricsTab, _fromUtf8(""))
 
         self.ConsoleTab = QtGui.QWidget()
@@ -166,7 +174,8 @@ class Ui_MainWindow(object):
         self.UiFunctions.loadSettings()
 
         #Set up our slot connections
-        QtCore.QObject.connect(self.RefreshLyricsButton, QtCore.SIGNAL(_fromUtf8("clicked()")), self.UiFunctions.mainAppLoop)
+        QtCore.QObject.connect(self.RefreshLyricsButton, QtCore.SIGNAL("clicked()"), self.UiFunctions.refreshLyricsButtonAction)
+        QtCore.QObject.connect(self.editLyricsButton, QtCore.SIGNAL("clicked()"), self.UiFunctions.editLyricsButtonAction)
         QtCore.QObject.connect(self.tabWidget, QtCore.SIGNAL(_fromUtf8("currentChanged(int)")), self.MainStatusWebView.reload)
         QtCore.QObject.connect(self.aboutMenuItem, QtCore.SIGNAL(_fromUtf8("triggered()")), self.UiFunctions.openAboutWindow)
         QtCore.QObject.connect(self.actionQuit, QtCore.SIGNAL(_fromUtf8("triggered()")), self.MainWindow.close)
@@ -179,6 +188,15 @@ class Ui_MainWindow(object):
         QtCore.QObject.connect(self.consoleO_ClearButton, QtCore.SIGNAL(_fromUtf8("clicked()")), self.UiFunctions.clear_console)
         QtCore.QObject.connect(self.lyricsTextView, QtCore.SIGNAL(_fromUtf8("anchorClicked(QUrl)")), self.UiFunctions.setSearchResult)
         QtCore.QMetaObject.connectSlotsByName(self.MainWindow)
+
+
+        #Tab order
+        self.MainWindow.setTabOrder(self.tabWidget, self.MainStatusWebView)
+        self.MainWindow.setTabOrder(self.MainStatusWebView, self.lyricsTextView)
+        self.MainWindow.setTabOrder(self.lyricsTextView, self.RefreshLyricsButton)
+        self.MainWindow.setTabOrder(self.RefreshLyricsButton, self.editLyricsButton)
+        self.MainWindow.setTabOrder(self.editLyricsButton, self.consoleOutput)
+        self.MainWindow.setTabOrder(self.consoleOutput, self.consoleO_ClearButton)
 
         #Tell the user we're not connected
         self.UiFunctions.setLyricsText("Not connected to Foobar2000's Web server, press check your settings and make sure Foobar is running.")
@@ -197,6 +215,7 @@ class Ui_MainWindow(object):
         self.UiFunctions.setWindowTitle("bLyrics  ::  Not Connected")
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.MainTab), _translate("MainWindow", "Current Status", None))
         self.RefreshLyricsButton.setText(_translate("MainWindow", "Refresh", None))
+        self.editLyricsButton.setText(_translate("MainWindow", "Edit", None))
         self.UiFunctions.setLyricsText("No Song Playing or Program Not Setup Properly")
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.LyricsTab), _translate("MainWindow", "Lyrics", None))
         self.consoleOutput.setHtml(_translate("MainWindow", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
@@ -219,5 +238,4 @@ class Ui_MainWindow(object):
         self.actionSearch.setText(_translate("MainWindow", "Search for lyrics", None))
         self.Statusbar.setText(_translate("MainWindow", "Welcome to bLyrics", None))
 
-from PyQt4 import QtWebKit
-from icon_resource_rc import *
+

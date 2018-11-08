@@ -18,12 +18,17 @@ class LyricsCacher(object):
                 self.checkSong = self.noCacheForYou
                 self.getLyrics = self.noCacheForYou
                 self.searchLyrics = self.noCacheForYou
+    @staticmethod
+    def getCachefilePath(song, artist):
+        return "%s%s" % (urlsafe_b64encode(BASE64TEMPLATE % (song, artist)), FILEEXTENSION)
 
     #Now sure if this is the best way to do this but It works without fiddling with return values/ifs
-    def noCacheForYou(self, *_, **__):
+    @staticmethod
+    def noCacheForYou(*_, **__):
         return None
 
-    def getLyricsFileList(self):
+    @staticmethod
+    def getLyricsFileList():
         #Only our cache files
         return [f for f in os.listdir(CACHEWRITEFOLDER) if \
                 (os.path.isfile(os.path.join(CACHEWRITEFOLDER, f)) is True and \
@@ -33,13 +38,13 @@ class LyricsCacher(object):
     #with SequenceMatcher to check for almost matches. Not sure yet.
     def checkSong(self, song, artist):
         files = self.getLyricsFileList()
-        if "%s%s" % (urlsafe_b64encode(BASE64TEMPLATE % (song, artist)), FILEEXTENSION) in files:
+        if self.getCachefilePath(song, artist) in files:
             return True
         else:
             return False
 
     def getLyrics(self, song, artist):
-        filepath = os.path.join(CACHEWRITEFOLDER, "%s%s" % (urlsafe_b64encode(BASE64TEMPLATE % (song, artist)), FILEEXTENSION))
+        filepath = os.path.join(CACHEWRITEFOLDER, self.getCachefilePath(song, artist))
         try:
             with open(filepath, 'r') as lyricsfile:
                 return lyricsfile.read().replace("\n", "<br>")
@@ -48,7 +53,10 @@ class LyricsCacher(object):
             print e
 
     def saveLyrics(self, song, artist, lyrics):
-        savepath = os.path.join(CACHEWRITEFOLDER, "%s%s" % (urlsafe_b64encode(BASE64TEMPLATE % (song, artist)), FILEEXTENSION))
+        savepath = os.path.join(CACHEWRITEFOLDER, self.getCachefilePath(song, artist))
+        #Most of the returned lyrics are html with <br>'s instead of proper line-breaks
+        if len(lyrics.splitlines()) == 1:
+            lyrics = re.sub("<br( /)?>", os.linesep, lyrics, flags=re.I)
         with open(savepath, mode='w') as lyricsfile:
             lyricsfile.write(lyrics)
 
