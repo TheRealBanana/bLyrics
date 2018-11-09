@@ -137,7 +137,11 @@ class lyricswikiObj(object):
                 else:
                     print "Zero length lyrics cache file, trying to grab fresh lyrics..."
             #We either dont have it cached or the cached lyrics were empty
-            self.Lyrics = self._getLyrics(self.song, self.artist, manual_mode=self.manual_mode["manual"]).encode("utf8")
+            self.Lyrics = self._getLyrics(self.song, self.artist, manual_mode=self.manual_mode["manual"])
+            try:
+                self.Lyrics = self.Lyrics.encode("utf8")
+            except:
+                pass
             self.last_return = [self.song, self.artist]
             self.songCache.saveLyrics(self.song, self.artist, self.Lyrics)
             return self.Lyrics
@@ -146,8 +150,8 @@ class lyricswikiObj(object):
 
     @staticmethod
     def setInternalOptions(options):
-        global _MASTER_RATIO, _DBGWRITE, _DEBUG_MODE, _DBGWRITEFOLDER    
-        #Set the options    
+        global _MASTER_RATIO, _DBGWRITE, _DEBUG_MODE, _DBGWRITEFOLDER
+        #Set the options
         _MASTER_RATIO = float(options["masterMatchRatio"])
         _DBGWRITE = options["debugWriteEnabled"]
         _DEBUG_MODE = options["debugModeEnabled"]
@@ -353,7 +357,7 @@ class lyricswikiObj(object):
                 lyrics_url = re.search("<a href=\"(.*?)\" title=\"%s\">%s lyrics" % (song, song), refined_results, re.S|re.I).group(1)
                 
                 self._DEBUG("lwDBG D"); lwdbgstage = "D"
-            except:
+            except Exception as e:
                 #We now make one attempt to match up the song title with the first few results using difflib unless the user wants the results for a search
                 lyrics_url = self.songlyrics_getLyricsURL(song, artist, refined_results)
                 if lyrics_url is None:

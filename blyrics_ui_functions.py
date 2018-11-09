@@ -384,7 +384,7 @@ class UIFunctions(object):
         lwop["debugModeEnabled"] = options["Advanced"][0]
         lwop["debugWriteEnabled"] = options["Advanced"][1]
         lwop["debugOutputFolder"] = options["Advanced"][2]
-        lwop["masterMatchRatio"] = options["Advanced"][4]
+        lwop["masterMatchRatio"] = options["Advanced"][3]
         self.lyricsProg.setInternalOptions(lwop)
 
     def clear_console(self):
