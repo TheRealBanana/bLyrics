@@ -67,11 +67,14 @@ class foobarStatusDownloader(object):
             if len(data["prevplayedItem"]) > 0:
                 current_song_id = int(data["prevplayedItem"])
             else:
-                current_song_id = int(data["focusedItem"])
+                try:
+                    current_song_id = int(data["focusedItem"])
+                except:
+                    current_song_id = "?"
 
         #Deriving the page ourselves because playlistPage is just whatever page is currently visible, not the page
         #that our song is actually on.
-        if (data["playlistActive"] == data["playlistPlaying"]) or data["playingItem"] == "?":
+        if (data["playlistActive"] == data["playlistPlaying"]) or data["playingItem"] == "?" and current_song_id != "?":
             current_page = (current_song_id/int(data["playlistItemsPerPage"])) + 1
             cur_position_on_page = current_song_id - (current_page-1) * int(data["playlistItemsPerPage"])
             current_song_name = data["playlist"][cur_position_on_page]["t"]

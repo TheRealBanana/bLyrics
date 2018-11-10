@@ -315,10 +315,13 @@ class lyricswikiObj(object):
         "Upgrade-Insecure-Requests": "1"
         }
         
-        request = urllib2.Request(queryurl, None, downloaderHeaders)
-        search_query = urllib2.urlopen(request)
-        search_html = search_query.read()
-        search_query.close()
+        try:
+            request = urllib2.Request(queryurl, None, downloaderHeaders)
+            search_query = urllib2.urlopen(request)
+            search_html = search_query.read()
+            search_query.close()
+        except:
+            return "A connection error has occurred."
     
         #Some stuff needs the song/artist name to be clean
         clean_song = _pUnescape(song)
