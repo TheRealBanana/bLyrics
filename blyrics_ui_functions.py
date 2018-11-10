@@ -61,16 +61,16 @@ class foobarStatusDownloader(object):
         playback_mode = int(data["playbackOrder"])
 
         if isplaying or ispaused:
-            current_song_id = int(data["playingItem"])
+            current_song_id = data["playingItem"]
         else:
             #Currently stopped so try and use either the last playing song or the currently focused item
             if len(data["prevplayedItem"]) > 0:
-                current_song_id = int(data["prevplayedItem"])
+                current_song_id = data["prevplayedItem"]
             else:
-                try:
-                    current_song_id = int(data["focusedItem"])
-                except:
-                    current_song_id = "?"
+                current_song_id = data["focusedItem"]
+
+        if current_song_id != "?":
+            current_song_id = int(current_song_id)
 
         #Deriving the page ourselves because playlistPage is just whatever page is currently visible, not the page
         #that our song is actually on.

@@ -4,8 +4,9 @@ import os.path
 from base64 import urlsafe_b64encode#, urlsafe_b64decode
 
 CACHEWRITEFOLDER = os.path.join(os.path.dirname(os.path.realpath(__file__)), ".lyricscache")
-BASE64TEMPLATE = "%s___%s"
+BASE64TEMPLATE = "%(ARTIST)s___%(SONG)s"
 FILEEXTENSION = ".blyrics.txt"
+HTMLBREAKREGEX = re.compile("<br( /)?>", flags=re.I|re.M)
 
 class LyricsCacher(object):
     def __init__(self):
@@ -20,7 +21,7 @@ class LyricsCacher(object):
                 self.searchLyrics = self.noCacheForYou
     @staticmethod
     def getCachefilePath(song, artist):
-        return "%s%s" % (urlsafe_b64encode(BASE64TEMPLATE % (song, artist)), FILEEXTENSION)
+        return "%s%s" % (urlsafe_b64encode(BASE64TEMPLATE % {"SONG": song, "ARTIST": artist}), FILEEXTENSION)
 
     #Now sure if this is the best way to do this but It works without fiddling with return values/ifs
     @staticmethod
@@ -55,8 +56,11 @@ class LyricsCacher(object):
     def saveLyrics(self, song, artist, lyrics):
         savepath = os.path.join(CACHEWRITEFOLDER, self.getCachefilePath(song, artist))
         #Most of the returned lyrics are html with <br>'s instead of proper line-breaks
-        if len(lyrics.splitlines()) == 1:
-            lyrics = re.sub("<br( /)?>", os.linesep, lyrics, flags=re.I)
+        if len(lyrics.splitlines()) > 1:
+            #Looks like we have newlines already, remove any br's and hope it looks fine
+            lyrics = HTMLBREAKREGEX.sub("", lyrics)
+        else:
+            lyrics = HTMLBREAKREGEX.sub(os.linesep, lyrics)
         with open(savepath, mode='w') as lyricsfile:
             lyricsfile.write(lyrics)
 
