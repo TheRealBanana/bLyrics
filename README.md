@@ -9,5 +9,4 @@ ajquery template for httpcontrol<br>
 Screenshots:
 
 ![Tab 1 screenshot](http://i.imgur.com/HaOa3Xc.jpg)
-![Tab 2 screenshot](http://i.imgur.com/htqP0wY.jpg)
-![Tab 3 screenshot](http://i.imgur.com/mKi46lM.jpg)
+![Tab 2 screenshot](https://i.imgur.com/o4ZRDKW.png)
