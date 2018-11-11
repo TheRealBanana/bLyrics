@@ -160,12 +160,12 @@ class lyricswikiObj(object):
     #Yeah thats ugly, tacking on a _ onto the beginning.... Fite me...
     def _getLyrics(self, song, artist, manual_mode=False, search_mode=False, search_url=None):
         if search_mode is True:
-            search_results = self.songlyrics_getLyrics(artist, song, search_mode=True)
+            search_results = self.songlyrics_getLyrics(song, artist, search_mode=True)
             return search_results
         
         if search_url is not None:
             self._DEBUG("mainGL: Getting lyrics for supplied url")
-            songLyrics = self.songlyrics_getLyrics(artist, song, url=search_url)
+            songLyrics = self.songlyrics_getLyrics(song, artist, url=search_url)
             return songLyrics
 
         #We'll try both the wikia and songlyrics.com functions before we give up
@@ -182,7 +182,7 @@ class lyricswikiObj(object):
         #songLyrics = None
         if songLyrics is None:
             self._DEBUG("mainGL: Previous function returned None, getting lyrics from songlyrics_getLyrics()")
-            songLyrics = self.songlyrics_getLyrics(artist, song)
+            songLyrics = self.songlyrics_getLyrics(song, artist)
         
         #Now we test the length of the lyrics returned, setting the lyrics as "Lyrics not found" if required.
         if len(songLyrics) < 2:
@@ -280,7 +280,7 @@ class lyricswikiObj(object):
         
         if re.search("Unfortunately(.*?)not licensed(.*?)random page", finishedlyrics) is not None:    #This is kind of a weak regular expression and it could easily change format in the future
             self._DEBUG("lwoGlDBG GOING ALT 3")
-            finishedlyrics = self.songlyrics_getLyrics(artist, song)
+            finishedlyrics = self.songlyrics_getLyrics(song, artist)
     
         else:
             print "DEBUG_LURL: " + str(lurl)
@@ -289,7 +289,7 @@ class lyricswikiObj(object):
     
     
     
-    def songlyrics_getLyrics(self, artist, song, search_mode=False, url=None):
+    def songlyrics_getLyrics(self, song, artist, search_mode=False, url=None):
         hparse = HTMLParser.HTMLParser()
         
         #Ok this other website doesn't offer us an easy-to-use API so we have to manually scrape their website and figure it out ourselves

@@ -4,6 +4,7 @@ import re
 from about_pane import *
 from options_dialog import *
 from manualQueryDialog import *
+from cachebuilder_progress_bar import Ui_cachebuilderProgressDialog
 from lyricswiki import lyricswikiObj
 from PyQt4 import QtCore, QtGui
 from time import time as tTime
@@ -445,9 +446,12 @@ p, li { white-space: pre-wrap; }
         if text is not None and len(text) > 0:
             self.UI.Statusbar.setText(_translate("MainWindow", text, None))
 
+    def areYouSureQuestion(self, title, message):
+        return QtGui.QMessageBox.question(self.UI.MainWindow, title, message, QtGui.QMessageBox.Yes, QtGui.QMessageBox.No)
+
     def clearLyricsCacheAction(self):
         #U sure?
-        if QtGui.QMessageBox.question(self.UI.MainWindow, "Clear Lyrics Cache?", "<p align='center'>Are you sure you want to remove all cached lyrics?<br>(This cannot be undone)</p>", QtGui.QMessageBox.Yes, QtGui.QMessageBox.No) == QtGui.QMessageBox.Yes:
+        if  self.areYouSureQuestion("Clear Lyrics Cache?", "<p align='center'>Are you sure you want to remove all cached lyrics?<br>(This cannot be undone)</p>") == QtGui.QMessageBox.Yes:
             numfiles = self.lyricsProg.songCache.clearLyricsCache()
             QtGui.QMessageBox.information(self.UI.MainWindow, "Cached Cleared!", "Successfully cleared %s cached lyrics files!" % numfiles)
             print "Removed %d cached lyrics" % numfiles
@@ -474,8 +478,10 @@ p, li { white-space: pre-wrap; }
         #If we get a blank page (i.e. no lyrics) we reacquire lyrics from online sources
         #If the user really wants to have no lyrics (blank page) they can put a space or line break.
         self.lyricsProg.songCache.saveLyrics(self.lyricsProg.song, self.lyricsProg.artist, newlyrics.encode("utf8"))
+        print "Saved updated lyrics for '%s' by %s" % (self.lyricsProg.song, self.lyricsProg.artist)
         self.resetEditLyricsState()
         self.refreshLyricsButtonAction()
+
 
     def resetEditLyricsState(self):
         #Undo everything done by editLyricsButtonAction()
@@ -493,3 +499,29 @@ p, li { white-space: pre-wrap; }
             QtCore.QObject.connect(self.UI.RefreshLyricsButton, QtCore.SIGNAL(_fromUtf8("clicked()")), self.refreshLyricsButtonAction)
             self.UI.editLyricsButton.setText("Edit")
             QtCore.QObject.connect(self.UI.editLyricsButton, QtCore.SIGNAL(_fromUtf8("clicked()")), self.editLyricsButtonAction)
+
+    def pregenLyricsCache(self):
+        #Find out the current number of songs in the active playlist
+        oldpagelength = self.fb2k.queryWebInterface()["playlistItemsPerPage"]
+        #Hope the user doesn't have more than 16384 songs in a single playlist
+        bigdata =  self.fb2k.queryWebInterface(urlsuffix="/ajquery/?cmd=PlaylistItemsPerPage&param1=16384&param3=js/state.json")
+        #Switch back
+        self.fb2k.queryWebInterface(urlsuffix="/ajquery/?cmd=PlaylistItemsPerPage&param1=%s&param3=js/state.json" % oldpagelength, noreturn=True)
+        totalsongs = len(bigdata["playlist"])
+
+
+        #This is going to take a whole lot of time so we are going to display a progress bar w/ a cancel button.
+        #Make sure the user knows whats up
+        title = "Pregenerate lyrics?"
+        message = "<p align='center'>Are you sure you want to download lyrics for all %s songs in the current playlist?<br><br>(This will take a while but can be canceled)</p>" % totalsongs
+        if self.areYouSureQuestion(title, message) == QtGui.QMessageBox.No: return
+
+        widget = QtGui.QDialog(self.UI.MainWindow)
+        cachebuilderui = Ui_cachebuilderProgressDialog()
+        cachebuilderui.setupUi(widget, bigdata, self.lyricsProg)
+       # widget.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
+        widget.setWindowIcon(QtGui.QIcon(":/icon/bLyrics.ico"))
+        widget.setModal(True)
+        widget.show()
+        cachebuilderui.generateCache()
+        QtGui.QMessageBox.information(self.UI.MainWindow, "Cache Generation Complete", "Finished generating cache files. Check the console tab for for additional information.", QtGui.QMessageBox.Ok)
