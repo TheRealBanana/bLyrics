@@ -5,12 +5,16 @@ from about_pane import *
 from options_dialog import *
 from manualQueryDialog import *
 from cachebuilder_progress_bar import Ui_cachebuilderProgressDialog
-from lyricswiki import lyricswikiObj
+from lyrics_cacher import LyricsCacher
 from PyQt4 import QtCore, QtGui
 from time import time as tTime
 from datetime import datetime as dTime
 from re import split as REsplit
 from re import sub as REsub
+
+#In the future I plan to make this self enumerating but for now we need to list all providers:
+from lyricsProviders import lyricswiki, songlyrics
+provider_classes = [lyricswiki.LyricsProvider, songlyrics.LyricsProvider]
 
 
 #To force this program to always be on top of other windows change this to True
@@ -113,7 +117,7 @@ class UIFunctions(object):
         self.is_connected = False
         self.actual_song = ""
         self.last_song = None
-        self.lyricsProg = lyricswikiObj(self)
+        self.songCache = LyricsCacher()
         self.address = ("127.0.0.1", 8888)
         self.fb2k = foobarStatusDownloader(UiReference.MainWindow, self.address)
         self.last_sb_message = None
@@ -127,6 +131,10 @@ class UIFunctions(object):
         self.fontStyle = 'MS Shell Dlg 2, 8'
         self.fontFgColor = '#000000'
         self.fontBgColor = '#FFFFFF'
+        self.masterMatchRatio = 0.65
+        self.providers = []
+        for p in provider_classes:
+            self.providers.append(p())
 
     #Rewriting this app is daunting to say the least. I am making a new main function with the hopes
     #of just replacing the old crappy main function with better code bit by bit.
@@ -140,6 +148,7 @@ class UIFunctions(object):
 
         if return_data is not None:
             self.actual_song = return_data["song_name"]
+            self.actual_artist = return_data["song_name"]
 
             if return_data["song_name"] is not None:
                 songartist = "%s - %s" % (return_data["song_name"], return_data["artist_name"])
@@ -158,18 +167,30 @@ class UIFunctions(object):
             else:
                 self.setWindowTitle("bLyrics  ::  Stopped  ::  %s" % songartist)
 
-
-            #Finally update the lyrics. Our manual and search modes really make this more complicated than it should be.
-            if self.lyricsProg.manual_mode["manual"] is True:
-                if self.lyricsProg.manual_mode["song_at_set"] != self.actual_song:
-                    self.lyricsProg.manual_mode["man"] = False
-                    self.lyricsProg.update_current_track(return_data["song_name"], return_data["artist_name"])
-            else:
-                self.lyricsProg.update_current_track(return_data["song_name"], return_data["artist_name"])
-            lyrics = self.lyricsProg.getLyrics()
+            lyrics = self.getUpdatedLyrics(return_data["song_name"], return_data["artist_name"])
             if lyrics is not None:
                 self.resetEditLyricsState()
                 self.setLyricsText(lyrics)
+
+    def getUpdatedLyrics(self, song, artist):
+        #Check our cache, and download if missing
+        if self.hasSongChanged():
+            if self.songCache.checkSong(song, artist) is True:
+                cachedlyrics = self.songCache.getLyrics(song, artist)
+                if len(cachedlyrics) > 0:
+                    print "Returned cached lyrics for '%s' by %s" % (song, artist)
+                    return cachedlyrics
+                else:
+                    print "Zero length lyrics cache file, trying to grab fresh lyrics..."
+            for p in self.providers:
+                lyrics = p.getLyrics(song, artist)
+                if lyrics is not None:
+                    self.last_return = [song, artist]
+                    self.songCache.saveLyrics(song, artist, lyrics)
+                    return lyrics
+            return "End of provider list"
+        return None
+
 
     def hasSongChanged(self):
         if self.last_song == self.actual_song:
@@ -389,7 +410,7 @@ class UIFunctions(object):
         lwop["debugWriteEnabled"] = options["Advanced"][1]
         lwop["debugOutputFolder"] = options["Advanced"][2]
         lwop["masterMatchRatio"] = options["Advanced"][3]
-        self.lyricsProg.setInternalOptions(lwop)
+        self.masterMatchRatio = lwop["masterMatchRatio"]
 
     def clear_console(self):
         self.output = []
@@ -452,7 +473,7 @@ p, li { white-space: pre-wrap; }
     def clearLyricsCacheAction(self):
         #U sure?
         if  self.areYouSureQuestion("Clear Lyrics Cache?", "<p align='center'>Are you sure you want to remove all cached lyrics?<br>(This cannot be undone)</p>") == QtGui.QMessageBox.Yes:
-            numfiles = self.lyricsProg.songCache.clearLyricsCache()
+            numfiles = self.songCache.clearLyricsCache()
             QtGui.QMessageBox.information(self.UI.MainWindow, "Cached Cleared!", "Successfully cleared %s cached lyrics files!" % numfiles)
             print "Removed %d cached lyrics" % numfiles
 
@@ -477,10 +498,9 @@ p, li { white-space: pre-wrap; }
         newlyrics = unicode(self.UI.lyricsTextView.toPlainText())
         #If we get a blank page (i.e. no lyrics) we reacquire lyrics from online sources
         #If the user really wants to have no lyrics (blank page) they can put a space or line break.
-        self.lyricsProg.songCache.saveLyrics(self.lyricsProg.song, self.lyricsProg.artist, newlyrics.encode("utf8"))
-        print "Saved updated lyrics for '%s' by %s" % (self.lyricsProg.song, self.lyricsProg.artist)
+        self.songCache.saveLyrics(self.actual_song, self.actual_artist, newlyrics.encode("utf8"))
+        print "Saved updated lyrics for '%s' by %s" % (self.actual_song, self.actual_artist)
         self.resetEditLyricsState()
-        self.refreshLyricsButtonAction()
 
 
     def resetEditLyricsState(self):
@@ -499,6 +519,7 @@ p, li { white-space: pre-wrap; }
             QtCore.QObject.connect(self.UI.RefreshLyricsButton, QtCore.SIGNAL(_fromUtf8("clicked()")), self.refreshLyricsButtonAction)
             self.UI.editLyricsButton.setText("Edit")
             QtCore.QObject.connect(self.UI.editLyricsButton, QtCore.SIGNAL(_fromUtf8("clicked()")), self.editLyricsButtonAction)
+            self.refreshLyricsButtonAction()
 
     def pregenLyricsCache(self):
         #Find out the current number of songs in the active playlist
