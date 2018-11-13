@@ -97,7 +97,7 @@ class LyricsProvider(object):
                 lyrics_url = self.songlyrics_getLyricsURL(song, artist, refined_results)
                 if lyrics_url is None:
                     #If at any time something after here fails we return the error and don't even attempt to continue
-                    return "No lyrics for this song or something else went wrong, sorry.  :(<br><br>Song: %s<br>Artist: %s<br><br>Search URL: %s" % (clean_song, clean_artist, queryurl)
+                    return None
             
         else:
             lyrics_url = url
