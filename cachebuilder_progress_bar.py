@@ -23,11 +23,11 @@ except AttributeError:
         return QtGui.QApplication.translate(context, text, disambig)
 
 class Ui_cachebuilderProgressDialog(object):
-    def setupUi(self, cachebuilderProgressDialog, songdata, lyricsProgRef):
+    def setupUi(self, cachebuilderProgressDialog, songdata, getLyricsFunc, lyricsCacheRef):
         self.totalsongs = len(songdata["playlist"])
         self.songdata = songdata
-        self.lyricsProgRef = lyricsProgRef
-        self.lyricsCacheRef = lyricsProgRef.songCache
+        self.getLyricsFunc = getLyricsFunc
+        self.lyricsCacheRef = lyricsCacheRef
         self.quit = False
         self.widget = cachebuilderProgressDialog
         cachebuilderProgressDialog.setObjectName(_fromUtf8("cachebuilderProgressDialog"))
@@ -105,7 +105,7 @@ class Ui_cachebuilderProgressDialog(object):
                 i += 1
                 #And get then update the song lyrics. Skip songs already in the cache.
                 if self.lyricsCacheRef.checkSong(song, artist) is False:
-                    lyrics = self.lyricsProgRef._getLyrics(song, artist)
+                    lyrics = self.getLyricsFunc(song, artist, forced=True)
                     try:
                         lyrics = lyrics.encode("utf8")
                     except:

@@ -128,8 +128,9 @@ class LyricsProvider(object):
             final_lyrics = lyrics_raw
         #And now we decode and unescape the string back into plain english and we're DONE!
         final_lyrics = hparse.unescape(final_lyrics.decode("ascii", "ignore")) #The decode should remove anything the above replacement code didnt get
-        
-        
+
+        if "We do not have the lyrics for" in final_lyrics:
+            return None
         print "DEBUG_LURL: " + str(lyrics_url)
         return final_lyrics
         
@@ -174,8 +175,8 @@ class LyricsProvider(object):
                         return entry_url
         if search_mode is True:
             return search_mode_results
-        
-        
+
+
         return None
     
     @staticmethod

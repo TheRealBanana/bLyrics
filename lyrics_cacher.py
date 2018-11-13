@@ -10,15 +10,8 @@ HTMLBREAKREGEX = re.compile("<br( /)?>", flags=re.I|re.M)
 
 class LyricsCacher(object):
     def __init__(self):
-        #Check if we have access to the cache folder
-        if os.access(CACHEWRITEFOLDER, os.F_OK) is False:
-            try:
-                os.makedirs(CACHEWRITEFOLDER)
-            except:
-                #Ok no cache for you!
-                self.checkSong = self.noCacheForYou
-                self.getLyrics = self.noCacheForYou
-                self.searchLyrics = self.noCacheForYou
+        self.checkLyricsDir()
+
     @staticmethod
     def getCachefilePath(song, artist):
         return "%s%s" % (urlsafe_b64encode(BASE64TEMPLATE % {"SONG": song, "ARTIST": artist}), FILEEXTENSION)
@@ -28,12 +21,31 @@ class LyricsCacher(object):
     def noCacheForYou(*_, **__):
         return None
 
-    @staticmethod
-    def getLyricsFileList():
+    def getLyricsFileList(self):
         #Only our cache files
-        return [f for f in os.listdir(CACHEWRITEFOLDER) if \
+        if self.checkLyricsDir():
+            return [f for f in os.listdir(CACHEWRITEFOLDER) if \
                 (os.path.isfile(os.path.join(CACHEWRITEFOLDER, f)) is True and \
                 (re.match("^.*%s$" % re.escape(FILEEXTENSION), f)) is not None)]
+        else:
+            return []
+
+    #Create lyrics directory if necessary (if posible, if not disable cache access)
+    def checkLyricsDir(self):
+        #Check if we have access to the cache folder
+        if os.access(CACHEWRITEFOLDER, os.F_OK) is False:
+            try:
+                os.makedirs(CACHEWRITEFOLDER)
+                return True
+            except:
+                #Ok no cache for you!
+                self.checkSong = self.noCacheForYou
+                self.getLyrics = self.noCacheForYou
+                self.searchLyrics = self.noCacheForYou
+        else:
+            return True
+        print "There was a problem creating the lyrics cache folder."
+        return False
 
     #For now this is exact matching now. Later we may use the b64decode()'d string
     #with SequenceMatcher to check for almost matches. Not sure yet.
@@ -61,8 +73,19 @@ class LyricsCacher(object):
             lyrics = HTMLBREAKREGEX.sub("", lyrics)
         else:
             lyrics = HTMLBREAKREGEX.sub(os.linesep, lyrics)
-        with open(savepath, mode='w') as lyricsfile:
-            lyricsfile.write(lyrics)
+        try:
+            lyrics = lyrics.encode("utf8")
+        except: pass
+        #Make sure our cache directory is there and ready to be written
+        if self.checkLyricsDir():
+            try:
+                with open(savepath, mode='w') as lyricsfile:
+                    lyricsfile.write(lyrics)
+            except:
+                print "There was an error saving the lyrics for '%s' by %s to file" % (song, artist)
+
+    def getCacheSize(self):
+        return len(self.getLyricsFileList())
 
     def clearLyricsCache(self):
         print "Clearing Lyrics Cache..."

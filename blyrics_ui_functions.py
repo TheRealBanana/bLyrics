@@ -117,7 +117,7 @@ class UIFunctions(object):
         self.is_connected = False
         self.actual_song = ""
         self.last_song = None
-        self.songCache = LyricsCacher()
+        self.lyricsCache = LyricsCacher()
         self.address = ("127.0.0.1", 8888)
         self.fb2k = foobarStatusDownloader(UiReference.MainWindow, self.address)
         self.last_sb_message = None
@@ -148,7 +148,7 @@ class UIFunctions(object):
 
         if return_data is not None:
             self.actual_song = return_data["song_name"]
-            self.actual_artist = return_data["song_name"]
+            self.actual_artist = return_data["artist_name"]
 
             if return_data["song_name"] is not None:
                 songartist = "%s - %s" % (return_data["song_name"], return_data["artist_name"])
@@ -172,11 +172,11 @@ class UIFunctions(object):
                 self.resetEditLyricsState()
                 self.setLyricsText(lyrics)
 
-    def getUpdatedLyrics(self, song, artist):
+    def getUpdatedLyrics(self, song, artist, forced=False):
         #Check our cache, and download if missing
-        if self.hasSongChanged():
-            if self.songCache.checkSong(song, artist) is True:
-                cachedlyrics = self.songCache.getLyrics(song, artist)
+        if self.hasSongChanged() or forced:
+            if self.lyricsCache.checkSong(song, artist) is True:
+                cachedlyrics = self.lyricsCache.getLyrics(song, artist)
                 if len(cachedlyrics) > 0:
                     print "Returned cached lyrics for '%s' by %s" % (song, artist)
                     return cachedlyrics
@@ -186,9 +186,10 @@ class UIFunctions(object):
                 lyrics = p.getLyrics(song, artist)
                 if lyrics is not None:
                     self.last_return = [song, artist]
-                    self.songCache.saveLyrics(song, artist, lyrics)
+                    self.lyricsCache.saveLyrics(song, artist, lyrics)
                     return lyrics
-            return "End of provider list"
+            providerlist = ", ".join([p.LYRICS_PROVIDER_NAME for p in self.providers])
+            return "Couldn't find lyrics for '%s' by %s. <br><br>Tried following lyrics providers: %s" % (song, artist, providerlist)
         return None
 
 
@@ -472,8 +473,8 @@ p, li { white-space: pre-wrap; }
 
     def clearLyricsCacheAction(self):
         #U sure?
-        if  self.areYouSureQuestion("Clear Lyrics Cache?", "<p align='center'>Are you sure you want to remove all cached lyrics?<br>(This cannot be undone)</p>") == QtGui.QMessageBox.Yes:
-            numfiles = self.songCache.clearLyricsCache()
+        if  self.areYouSureQuestion("Clear Lyrics Cache?", "<p align='center'>Are you sure you want to remove all %s cached lyrics?<br>(This cannot be undone)</p>" % self.lyricsCache.getCacheSize()) == QtGui.QMessageBox.Yes:
+            numfiles = self.lyricsCache.clearLyricsCache()
             QtGui.QMessageBox.information(self.UI.MainWindow, "Cached Cleared!", "Successfully cleared %s cached lyrics files!" % numfiles)
             print "Removed %d cached lyrics" % numfiles
 
@@ -498,7 +499,7 @@ p, li { white-space: pre-wrap; }
         newlyrics = unicode(self.UI.lyricsTextView.toPlainText())
         #If we get a blank page (i.e. no lyrics) we reacquire lyrics from online sources
         #If the user really wants to have no lyrics (blank page) they can put a space or line break.
-        self.songCache.saveLyrics(self.actual_song, self.actual_artist, newlyrics.encode("utf8"))
+        self.lyricsCache.saveLyrics(self.actual_song, self.actual_artist, newlyrics.encode("utf8"))
         print "Saved updated lyrics for '%s' by %s" % (self.actual_song, self.actual_artist)
         self.resetEditLyricsState()
 
@@ -539,7 +540,7 @@ p, li { white-space: pre-wrap; }
 
         widget = QtGui.QDialog(self.UI.MainWindow)
         cachebuilderui = Ui_cachebuilderProgressDialog()
-        cachebuilderui.setupUi(widget, bigdata, self.lyricsProg)
+        cachebuilderui.setupUi(widget, bigdata, self.getUpdatedLyrics, self.lyricsCache)
        # widget.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
         widget.setWindowIcon(QtGui.QIcon(":/icon/bLyrics.ico"))
         widget.setModal(True)
