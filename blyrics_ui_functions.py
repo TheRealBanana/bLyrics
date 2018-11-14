@@ -4,17 +4,14 @@ import re
 from about_pane import *
 from options_dialog import *
 from manualQueryDialog import *
-from cachebuilder_progress_bar import Ui_cachebuilderProgressDialog
+from lyrics_downloader import threadedLyricsDownloader
 from lyrics_cacher import LyricsCacher
 from PyQt4 import QtCore, QtGui
 from time import time as tTime
 from datetime import datetime as dTime
 from re import split as REsplit
 from re import sub as REsub
-
-#In the future I plan to make this self enumerating but for now we need to list all providers:
-from lyricsProviders import lyricswiki, songlyrics
-provider_classes = [lyricswiki.LyricsProvider, songlyrics.LyricsProvider]
+from HTMLParser import HTMLParser
 
 
 #To force this program to always be on top of other windows change this to True
@@ -101,8 +98,11 @@ class foobarStatusDownloader(object):
         return_data["isplaying"] = isplaying
         return_data["ispaused"] = ispaused
         return_data["playback_mode"] = playback_mode
-        return_data["song_name"] = current_song_name.encode("utf8")
-        return_data["artist_name"] = current_artist.encode("utf8")
+        #Encountered a problem with the ajquery template returning HTML escape sequences in song/artist names
+        #Hopefully this fixes it
+        h = HTMLParser()
+        return_data["song_name"] = h.unescape(current_song_name).encode("utf8")
+        return_data["artist_name"] = h.unescape(current_artist).encode("utf8")
         return_data["next_song_in_playlist"] = next_song_in_playlist
         return return_data
 
@@ -118,6 +118,8 @@ class UIFunctions(object):
         self.actual_song = ""
         self.last_song = None
         self.lyricsCache = LyricsCacher()
+        self.lyricsDownloader = None
+        self.lyricsDownloaderThread = None
         self.address = ("127.0.0.1", 8888)
         self.fb2k = foobarStatusDownloader(UiReference.MainWindow, self.address)
         self.last_sb_message = None
@@ -132,9 +134,6 @@ class UIFunctions(object):
         self.fontFgColor = '#000000'
         self.fontBgColor = '#FFFFFF'
         self.masterMatchRatio = 0.65
-        self.providers = []
-        for p in provider_classes:
-            self.providers.append(p())
 
     #Rewriting this app is daunting to say the least. I am making a new main function with the hopes
     #of just replacing the old crappy main function with better code bit by bit.
@@ -167,31 +166,42 @@ class UIFunctions(object):
             else:
                 self.setWindowTitle("bLyrics  ::  Stopped  ::  %s" % songartist)
 
-            lyrics = self.getUpdatedLyrics(return_data["song_name"], return_data["artist_name"])
-            if lyrics is not None:
-                self.resetEditLyricsState()
-                self.setLyricsText(lyrics)
+            self.getUpdatedLyrics(return_data["song_name"], return_data["artist_name"])
 
     def getUpdatedLyrics(self, song, artist, forced=False):
-        #Check our cache, and download if missing
         if self.hasSongChanged() or forced:
             if self.lyricsCache.checkSong(song, artist) is True:
                 cachedlyrics = self.lyricsCache.getLyrics(song, artist)
                 if len(cachedlyrics) > 0:
                     print "Returned cached lyrics for '%s' by %s" % (song, artist)
-                    return cachedlyrics
+                    self.setLyricsText(cachedlyrics)
+                    return
                 else:
                     print "Zero length lyrics cache file, trying to grab fresh lyrics..."
-            for p in self.providers:
-                lyrics = p.getLyrics(song, artist)
-                if lyrics is not None:
-                    self.last_return = [song, artist]
-                    self.lyricsCache.saveLyrics(song, artist, lyrics)
-                    return lyrics
-            providerlist = ", ".join([p.LYRICS_PROVIDER_NAME for p in self.providers])
-            return "Couldn't find lyrics for '%s' by %s. <br><br>Tried following lyrics providers: %s" % (song, artist, providerlist)
-        return None
+            self.createNewThreadWork(song, artist)
 
+
+    def createNewThreadWork(self, song, artist):
+        self.setLyricsText("Retrieving lyrics...")
+        if self.lyricsDownloaderThread is not None:
+            if self.lyricsDownloaderThread.isFinished() is True:
+                self.lyricsDownloaderThread.quit()
+            else:
+                if self.lyricsDownloaderThread.isRunning() is True:
+                    return None
+                self.lyricsDownloaderThread.quit()
+            #Make sure
+            self.lyricsDownloaderThread.wait()
+            QtCore.QObject.disconnect(self.lyricsDownloaderThread, QtCore.SIGNAL("started()"), self.lyricsWorkTask.doWork)
+
+        self.lyricsDownloaderThread = QtCore.QThread()
+        self.lyricsWorkTask = threadedLyricsDownloader(song, artist)
+        self.lyricsWorkTask.moveToThread(self.lyricsDownloaderThread)
+
+        QtCore.QObject.connect(self.lyricsDownloaderThread, QtCore.SIGNAL("started()"), self.lyricsWorkTask.doWork)
+        QtCore.QObject.connect(self.lyricsWorkTask, QtCore.SIGNAL("workFinished()"), self.lyricsDownloaderThread.quit)
+        QtCore.QObject.connect(self.lyricsWorkTask, QtCore.SIGNAL("lyricsUpdate"), self.setLyricsText)
+        self.lyricsDownloaderThread.start()
 
     def hasSongChanged(self):
         if self.last_song == self.actual_song:
@@ -325,6 +335,10 @@ class UIFunctions(object):
         self.appSettings.setValue("windowPos", self.UI.MainWindow.pos())
         self.appSettings.endGroup()
         self.appSettings.sync()
+        #Not a great place to put this but while we're here....
+        if self.lyricsDownloaderThread is not None:
+            self.lyricsDownloaderThread.quit()
+            self.lyricsDownloaderThread.wait(1000)
 
     def testSettingGroup(self, groupName):
         #The reason we join() and then split() is because it's a quick way to convert a QStringList,

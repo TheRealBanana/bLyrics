@@ -3,6 +3,10 @@ from blyrics_ui_functions import _ALWAYS_ON_TOP_
 from PyQt4 import QtGui
 import sys
 
+#Set default encoding to utf8
+#Ima get this unicode problem under wraps eventually...
+reload(sys)
+sys.setdefaultencoding('utf8')
 
 #Trying something new with the stdout,stderr so I can see it in both the cmdline and UI console.
 class OUTMETHODS(object):

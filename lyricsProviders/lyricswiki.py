@@ -31,7 +31,6 @@ def _pUnescape(ostring):
         for p in ostring:
             p = _pUnescape(p)
             fstring = fstring + (p,)
-            
     return fstring
 
 class LyricsProvider(object):
@@ -41,10 +40,12 @@ class LyricsProvider(object):
         self.LYRICS_PROVIDER_VERSION = LYRICS_PROVIDER_VERSION
 
     def getLyrics(self, song, artist):
-        
         url = "http://lyrics.wikia.com/server.php?wsdl"
         cli = Client(url)
-        lurl = cli.service.getSong(_pUnescape(artist), _pUnescape(song)).url
+        try:
+            lurl = cli.service.getSong(_pUnescape(artist), _pUnescape(song)).url
+        except:
+            return None
         #If the url contains the suffix 'edit' somewhere we know there are no lyrics for this song.
         if re.match("^(.*)action=edit$", lurl) is not None:
             return None
@@ -96,7 +97,8 @@ class LyricsProvider(object):
         if re.search("Unfortunately(.*?)not licensed(.*?)random page", finishedlyrics) is not None:    #This is kind of a weak regular expression and it could easily change format in the future
             return None
         else:
-            print "DEBUG_LURL: " + str(lurl)
+            pass
+            #print "DEBUG_LURL: " + str(lurl)
         return finishedlyrics
     
     @staticmethod
