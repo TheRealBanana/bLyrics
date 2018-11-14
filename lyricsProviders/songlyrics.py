@@ -131,7 +131,7 @@ class LyricsProvider(object):
 
         if "We do not have the lyrics for" in final_lyrics:
             return None
-        print "DEBUG_LURL: " + str(lyrics_url)
+        #print "DEBUG_LURL: " + str(lyrics_url)
         return final_lyrics
         
     def songlyrics_getLyricsURL(self, song, artist, html, search_mode=False):

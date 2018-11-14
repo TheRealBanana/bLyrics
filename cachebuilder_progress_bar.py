@@ -6,6 +6,7 @@
 #
 # WARNING! All changes made in this file will be lost!
 from time import sleep
+from lyrics_downloader import threadedLyricsDownloader
 from PyQt4 import QtCore, QtGui
 
 try:
@@ -23,10 +24,17 @@ except AttributeError:
         return QtGui.QApplication.translate(context, text, disambig)
 
 class Ui_cachebuilderProgressDialog(object):
-    def setupUi(self, cachebuilderProgressDialog, songdata, getLyricsFunc, lyricsCacheRef):
+    def __init__(self):
+        self.song = None
+        self.artist = None
+        self.i = 0
+        self.lyricsDownloaderThread = None
+        self.lyricsWorkTask = None
+        super(Ui_cachebuilderProgressDialog, self).__init__()
+
+    def setupUi(self, cachebuilderProgressDialog, songdata, lyricsCacheRef):
         self.totalsongs = len(songdata["playlist"])
         self.songdata = songdata
-        self.getLyricsFunc = getLyricsFunc
         self.lyricsCacheRef = lyricsCacheRef
         self.quit = False
         self.widget = cachebuilderProgressDialog
@@ -82,47 +90,85 @@ class Ui_cachebuilderProgressDialog(object):
 
         self.retranslateUi(cachebuilderProgressDialog)
         QtCore.QObject.connect(self.cancelButton, QtCore.SIGNAL(_fromUtf8("clicked()")), self.cancelBuild)
+        QtCore.QObject.connect(self.widget, QtCore.SIGNAL("alreadyInCache"), self.cacheUpdateReturn)
+        QtCore.QObject.connect(self.widget, QtCore.SIGNAL("nextIteration"), self.nextIteration)
         QtCore.QMetaObject.connectSlotsByName(cachebuilderProgressDialog)
 
     def cancelBuild(self):
         self.quit = True
+        self.killThread()
         self.widget.close()
 
-    def generateCache(self):
-        i = 0
-        self.progressBar.setMaximum(self.totalsongs)
+    #Run it as a state machine
+    #Give it the songlist and an internal i
+    #Initiate download and stop
+    #When download finishes it releases a signal
+    #Signal hits a function in this class that does:
+    #   Save Lyrics to Cache
+    #   Increment i
+    #   Launch new thread
+    #   Wait some more and repeat
+
+    def killThread(self):
+        if self.lyricsDownloaderThread is not None:
+            self.lyricsDownloaderThread.quit()
+            self.lyricsDownloaderThread.wait()
+            QtCore.QObject.disconnect(self.lyricsDownloaderThread, QtCore.SIGNAL("started()"), self.lyricsWorkTask.doWork)
+
+    def updateSongArtist(self, song, artist):
+        self.song = song
+        self.artist = artist
+
+    def updateProgress(self):
+        perc = (float(self.i)/self.totalsongs)*100
+        labeltext = "[%s/%s - %.1f%%] Updating cached lyrics for '%s' by %s" % (self.i, self.totalsongs, perc, self.song, self.artist)
+        self.progressLabel.setText(labeltext)
+        self.progressBar.setValue(self.i)
         QtGui.QApplication.processEvents()
-        try:
-            while self.quit == False and i < self.totalsongs:
-                #Update the progress bar
-                artist = self.songdata["playlist"][i]["a"].encode("utf8")
-                song = self.songdata["playlist"][i]["t"].encode("utf8")
-                perc = (float(i)/self.totalsongs)*100
-                labeltext = "[%s/%s - %.1f%%] Updating cached lyrics for '%s' by %s" % (i, self.totalsongs, perc, song, artist)
-                self.progressLabel.setText(labeltext)
-                self.progressBar.setValue(i)
-                QtGui.QApplication.processEvents()
-                i += 1
-                #And get then update the song lyrics. Skip songs already in the cache.
-                if self.lyricsCacheRef.checkSong(song, artist) is False:
-                    lyrics = self.getLyricsFunc(song, artist, forced=True)
-                    try:
-                        lyrics = lyrics.encode("utf8")
-                    except:
-                        pass
-                    try:
-                        self.lyricsCacheRef.saveLyrics(song, artist, str(lyrics))
-                    except:
-                        print "There was an error saving lyrics for '%s' by %s. Skipping this song..." % (song, artist)
-                        continue
-                else:
-                    print "Lyrics for '%s' by %s are already cached." % (song, artist)
-                QtGui.QApplication.processEvents()
-        except Exception as e:
-            print "Cache generation halted due to an error: "
-            print e
-        print "Done generating cache files."
-        self.widget.close()
+
+    def cacheUpdateReturn(self, lyrics, lyricsprovidername):
+        if lyrics is not None and lyricsprovidername is not None:
+            print "Updated cached lyrics for '%s' by %s from %s" % (self.song, self.artist, lyricsprovidername)
+            try:
+                lyrics = lyrics.encode("utf8")
+            except:
+                pass
+            try:
+                self.lyricsCacheRef.saveLyrics(self.song, self.artist, lyrics)
+            except:
+                print "There was an error saving lyrics for '%s' by %s. Skipping this song..." % (self.song, self.artist)
+        self.i += 1
+        self.widget.emit(QtCore.SIGNAL("nextIteration"))
+
+    def nextIteration(self):
+        if self.quit == False and self.i < self.totalsongs:
+            self.artist = self.songdata["playlist"][self.i]["a"].encode("utf8")
+            self.song = self.songdata["playlist"][self.i]["t"].encode("utf8")
+            self.updateProgress()
+            if self.lyricsCacheRef.checkSong(self.song, self.artist) is False:
+                self.createNewThreadWork()
+            else:
+                print "Lyrics for '%s' by %s are already cached." % (self.song, self.artist)
+                self.widget.emit(QtCore.SIGNAL("alreadyInCache"), None, None)
+        else:
+            print "Done generating cache files."
+            self.widget.emit(QtCore.SIGNAL("cacheGenerationComplete"))
+
+    def createNewThreadWork(self):
+        self.killThread()
+
+        self.lyricsDownloaderThread = QtCore.QThread()
+        self.lyricsWorkTask = threadedLyricsDownloader(self.song, self.artist)
+        self.lyricsWorkTask.moveToThread(self.lyricsDownloaderThread)
+
+        QtCore.QObject.connect(self.lyricsDownloaderThread, QtCore.SIGNAL("started()"), self.lyricsWorkTask.doWork)
+        QtCore.QObject.connect(self.lyricsWorkTask, QtCore.SIGNAL("workFinished()"), self.lyricsDownloaderThread.quit)
+        QtCore.QObject.connect(self.lyricsWorkTask, QtCore.SIGNAL("lyricsUpdate"), self.cacheUpdateReturn)
+        self.lyricsDownloaderThread.start()
+
+    def startCacheGeneration(self):
+        self.i = 0
+        self.progressBar.setMaximum(self.totalsongs)
 
     def retranslateUi(self, cachebuilderProgressDialog):
         cachebuilderProgressDialog.setWindowTitle(_translate("cachebuilderProgressDialog", "Dialog", None))

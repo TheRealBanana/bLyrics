@@ -6,6 +6,7 @@ from options_dialog import *
 from manualQueryDialog import *
 from lyrics_downloader import threadedLyricsDownloader
 from lyrics_cacher import LyricsCacher
+from cachebuilder_progress_bar import Ui_cachebuilderProgressDialog
 from PyQt4 import QtCore, QtGui
 from time import time as tTime
 from datetime import datetime as dTime
@@ -120,6 +121,7 @@ class UIFunctions(object):
         self.lyricsCache = LyricsCacher()
         self.lyricsDownloader = None
         self.lyricsDownloaderThread = None
+        self.cachebuilderui = None
         self.address = ("127.0.0.1", 8888)
         self.fb2k = foobarStatusDownloader(UiReference.MainWindow, self.address)
         self.last_sb_message = None
@@ -200,8 +202,12 @@ class UIFunctions(object):
 
         QtCore.QObject.connect(self.lyricsDownloaderThread, QtCore.SIGNAL("started()"), self.lyricsWorkTask.doWork)
         QtCore.QObject.connect(self.lyricsWorkTask, QtCore.SIGNAL("workFinished()"), self.lyricsDownloaderThread.quit)
-        QtCore.QObject.connect(self.lyricsWorkTask, QtCore.SIGNAL("lyricsUpdate"), self.setLyricsText)
+        QtCore.QObject.connect(self.lyricsWorkTask, QtCore.SIGNAL("lyricsUpdate"), self.updateLyricsFromThread)
         self.lyricsDownloaderThread.start()
+
+    def updateLyricsFromThread(self, lyrics, lyricsprovidername):
+        print "Retrieved lyrics for '%s' by %s from %s" % (self.actual_song, self.actual_artist, lyricsprovidername)
+        self.setLyricsText(lyrics)
 
     def hasSongChanged(self):
         if self.last_song == self.actual_song:
@@ -553,11 +559,17 @@ p, li { white-space: pre-wrap; }
         if self.areYouSureQuestion(title, message) == QtGui.QMessageBox.No: return
 
         widget = QtGui.QDialog(self.UI.MainWindow)
-        cachebuilderui = Ui_cachebuilderProgressDialog()
-        cachebuilderui.setupUi(widget, bigdata, self.getUpdatedLyrics, self.lyricsCache)
+        self.cachebuilderui = Ui_cachebuilderProgressDialog()
+        self.cachebuilderui.setupUi(widget, bigdata, self.lyricsCache)
+        QtCore.QObject.connect(self.cachebuilderui.widget, QtCore.SIGNAL("cacheGenerationComplete"), self.cacheBuildReturn)
        # widget.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
         widget.setWindowIcon(QtGui.QIcon(":/icon/bLyrics.ico"))
-        widget.setModal(True)
+        #widget.setModal(True)
         widget.show()
-        cachebuilderui.generateCache()
+        self.cachebuilderui.startCacheGeneration()
+        self.cachebuilderui.widget.emit(QtCore.SIGNAL("nextIteration"))
+
+
+    def cacheBuildReturn(self):
+        self.cachebuilderui.widget.close()
         QtGui.QMessageBox.information(self.UI.MainWindow, "Cache Generation Complete", "Finished generating cache files. Check the console tab for for additional information.", QtGui.QMessageBox.Ok)
