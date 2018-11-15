@@ -560,16 +560,15 @@ p, li { white-space: pre-wrap; }
 
         widget = QtGui.QDialog(self.UI.MainWindow)
         self.cachebuilderui = Ui_cachebuilderProgressDialog()
-        self.cachebuilderui.setupUi(widget, bigdata, self.lyricsCache)
+        self.cachebuilderui.setupUi(widget, bigdata)
         QtCore.QObject.connect(self.cachebuilderui.widget, QtCore.SIGNAL("cacheGenerationComplete"), self.cacheBuildReturn)
        # widget.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
         widget.setWindowIcon(QtGui.QIcon(":/icon/bLyrics.ico"))
         #widget.setModal(True)
         widget.show()
         self.cachebuilderui.startCacheGeneration()
-        self.cachebuilderui.widget.emit(QtCore.SIGNAL("nextIteration"))
-
 
     def cacheBuildReturn(self):
-        self.cachebuilderui.widget.close()
+        print "Done generating cache files."
         QtGui.QMessageBox.information(self.UI.MainWindow, "Cache Generation Complete", "Finished generating cache files. Check the console tab for for additional information.", QtGui.QMessageBox.Ok)
+        self.cachebuilderui.widget.close()

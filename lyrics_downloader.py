@@ -18,7 +18,7 @@ class threadedLyricsDownloader(QObject):
         self.emit(SIGNAL("lyricsUpdate"), lyrics, providername)
         self.emit(SIGNAL("workFinished()"))
 
-    def getUpdatedLyrics(self, forced=False):
+    def getUpdatedLyrics(self):
         #Check our cache, and download if missing
         for p in self.providers:
             lyrics = p.getLyrics(self.song, self.artist)

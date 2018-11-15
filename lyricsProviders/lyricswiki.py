@@ -99,6 +99,9 @@ class LyricsProvider(object):
         else:
             pass
             #print "DEBUG_LURL: " + str(lurl)
+        #Instrumentals
+        if re.search("<b>Instrumental</b>", finishedlyrics) is not None:
+            finishedlyrics = "<b>Instrumental</b>"
         return finishedlyrics
     
     @staticmethod
