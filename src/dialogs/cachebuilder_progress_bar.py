@@ -5,9 +5,9 @@
 # Created by: PyQt4 UI code generator 4.11.4
 #
 # WARNING! All changes made in this file will be lost!
-from lyrics_cacher import LyricsCacher
+from logic.lyrics_cacher import LyricsCacher
 from PyQt4 import QtCore, QtGui
-from lyricsProviders import lyricswiki, songlyrics
+from logic.lyricsProviders import lyricswiki, songlyrics
 provider_classes = [lyricswiki.LyricsProvider, songlyrics.LyricsProvider]
 
 

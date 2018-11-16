@@ -159,4 +159,3 @@ class Ui_MainWindow(object):
         self.actionOptions.setText(_translate("MainWindow", "Options", None))
 
 from PyQt4 import QtWebKit
-import icon_resource_rc

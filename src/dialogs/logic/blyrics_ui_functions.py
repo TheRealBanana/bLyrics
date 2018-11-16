@@ -1,12 +1,12 @@
 import urllib2
 import json
 import re
-from about_pane import *
-from options_dialog import *
-from manualQueryDialog import *
+from ..about_pane import *
+from ..options_dialog import *
+from ..manualQueryDialog import *
+from ..cachebuilder_progress_bar import Ui_cachebuilderProgressDialog
 from lyrics_downloader import threadedLyricsDownloader
 from lyrics_cacher import LyricsCacher
-from cachebuilder_progress_bar import Ui_cachebuilderProgressDialog
 from PyQt4 import QtCore, QtGui
 from time import time as tTime
 from datetime import datetime as dTime

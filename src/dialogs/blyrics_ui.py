@@ -6,8 +6,7 @@
 #
 # WARNING! All changes made in this file will be lost!
 
-
-from blyrics_ui_functions import *
+from logic.blyrics_ui_functions import *
 from PyQt4 import QtGui
 from PyQt4 import QtWebKit
 from icon_resource_rc import *

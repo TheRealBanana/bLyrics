@@ -1,5 +1,4 @@
-from blyrics_ui import *
-from blyrics_ui_functions import _ALWAYS_ON_TOP_
+from dialogs.blyrics_ui import *
 from PyQt4 import QtGui
 import sys
 
@@ -53,6 +52,7 @@ if __name__ == "__main__":
     # Hook into the app's quiting sequence so it saves our settings before it quits
     app.aboutToQuit.connect(ui.UiFunctions.saveSettings)
     # Before we get going we get the user setting for _ALWAYS_ON_TOP
+    _ALWAYS_ON_TOP_ = False
     if ui.UiFunctions.testSettingGroup("Options") is True:
         rd = {"Advanced": ["alwaysOnTop"]}
         if ui.UiFunctions.loadSettings(optionsMenu=True, data=rd)["Advanced"][0] == "true":

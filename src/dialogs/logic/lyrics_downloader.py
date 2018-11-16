@@ -3,6 +3,7 @@ from lyrics_cacher import LyricsCacher
 
 #In the future I plan to make this self enumerating but for now we need to list all providers:
 from lyricsProviders import lyricswiki, songlyrics
+
 provider_classes = [lyricswiki.LyricsProvider, songlyrics.LyricsProvider]
 
 class threadedLyricsDownloader(QObject):

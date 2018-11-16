@@ -1,6 +1,5 @@
-import re, HTMLParser, urllib, urllib2
+import re, HTMLParser, urllib
 from suds.client import Client
-from difflib import SequenceMatcher as sMatcher
 from PyQt4 import QtCore
 
 

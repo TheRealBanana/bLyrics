@@ -81,4 +81,3 @@ class Ui_customQueryDialog(object):
         self.artistLabel.setText(_translate("customQueryDialog", "Artist:", None))
         self.songTitleLabel.setText(_translate("customQueryDialog", "Song Title:", None))
 
-import icon_resource_rc
