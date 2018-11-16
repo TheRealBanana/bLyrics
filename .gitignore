@@ -6,3 +6,6 @@ build/
 dbg/
 .idea
 .lyricscache
+#Only ui files in the source_ui folder get committed
+source_ui/*.py
+source_ui/*.pyc
