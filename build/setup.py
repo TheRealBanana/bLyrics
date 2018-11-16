@@ -4,11 +4,11 @@ import py2exe, sys
 sys.argv.append('py2exe')
 
 setup(
-	scripts = ["../bLyrics2.pyw"],
+	scripts = ["../src/bLyrics2.pyw"],
 	windows = 
 		[{
-			"script": "../bLyrics_COM.pyw",
-			"icon_resources": [(1, "../icon/bLyrics.ico")]
+			"script": "../src/bLyrics_COM.pyw",
+			"icon_resources": [(1, "../src/icon/bLyrics.ico")]
 		}],
 	data_files=[('imageformats',[r'C:\Python26\Lib\site-packages\PyQt4\plugins\imageformats\qico4.dll'])],
 	options = 
