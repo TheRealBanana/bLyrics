@@ -5,9 +5,9 @@ _CURDIR = getcwd()
 
 a = Analysis(['../src/bLyrics2.pyw'],
              pathex=[_CURDIR],
-             hiddenimports=[],
+             hiddenimports=["suds.client"],
              hookspath=None,
-             runtime_hooks=None)
+             runtime_hooks=None, datas=[("../src/dialogs/logic/lyricsProviders", "lyricsProviders")])
 pyz = PYZ(a.pure)
 exe = EXE(pyz,
           a.scripts,

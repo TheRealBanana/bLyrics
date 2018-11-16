@@ -205,7 +205,11 @@ class UIFunctions(object):
         self.lyricsDownloaderThread.start()
 
     def updateLyricsFromThread(self, lyrics, lyricsprovidername):
-        print "Retrieved lyrics for '%s' by %s from %s" % (self.actual_song, self.actual_artist, lyricsprovidername)
+        if lyricsprovidername is not None:
+            print "Retrieved lyrics for '%s' by %s from %s" % (self.actual_song, self.actual_artist, lyricsprovidername)
+        else:
+            #If lyricsprovidername is None we error'd out and the lyrics var holds our error message
+            print lyrics.replace("<br>", "")
         self.setLyricsText(lyrics)
 
     def hasSongChanged(self):

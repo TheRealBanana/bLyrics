@@ -12,7 +12,11 @@ except AttributeError:
 
 LYRICS_PROVIDER_NAME="Songlyrics"
 LYRICS_PROVIDER_VERSION="1.1"
-
+#Lyrics provider priority allows bLyrics to order lyrics providers properly. Lower numbered providers will be used
+#before higher numbered providers. Put the really slow ones at the end if you want cache generation to be quick.
+#Otherwise make the most reliable (in terms of lyrical content) the first priority. Providers with the same priority
+#are not guaranteed to run in any specific order.
+LYRICS_PROVIDER_PRIORITY=1
 
 
 #Just a quick little function to straighten out some of the escaped parenthesis before displaying them.

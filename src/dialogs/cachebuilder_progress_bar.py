@@ -7,8 +7,7 @@
 # WARNING! All changes made in this file will be lost!
 from logic.lyrics_cacher import LyricsCacher
 from PyQt4 import QtCore, QtGui
-from logic.lyricsProviders import lyricswiki, songlyrics
-provider_classes = [lyricswiki.LyricsProvider, songlyrics.LyricsProvider]
+from logic.lyrics_downloader import enumerateProviders
 
 
 try:
@@ -31,7 +30,7 @@ class threadedCacheGenerator(QtCore.QObject):
         self.totalsongs = len(self.songdata["playlist"])
         self.quitting = False
         self.lyricsCacheRef = LyricsCacher()
-        self.providers = [p() for p in provider_classes]
+        self.providers = [p.LyricsProvider() for p in enumerateProviders()]
         super(threadedCacheGenerator, self).__init__()
 
     def getUpdatedLyrics(self, song, artist):
