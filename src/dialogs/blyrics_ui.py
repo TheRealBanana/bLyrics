@@ -138,23 +138,6 @@ class Ui_MainWindow(object):
         self.actionPregenLyricsCache = QtGui.QAction(self.MainWindow)
         self.actionPregenLyricsCache.setObjectName(_fromUtf8("actionPregenLyricsCache"))
 
-        #Create submenu
-        self.subMenu = QtGui.QMenu(self.menuFile)
-        self.subMenu.setObjectName(_fromUtf8("subMenu"))
-
-        self.actionManualQuery = QtGui.QAction(self.MainWindow)
-        self.actionManualQuery.setObjectName(_fromUtf8("actionManualQuery"))
-
-        self.actionResetManualQuery = QtGui.QAction(self.MainWindow)
-        self.actionResetManualQuery.setObjectName(_fromUtf8("actionResetManualQuery"))
-
-        self.actionSearch = QtGui.QAction(self.MainWindow)
-        self.actionSearch.setObjectName(_fromUtf8("actionSearch"))
-        #build submenu
-        self.subMenu.addAction(self.actionSearch)
-        self.subMenu.addAction(self.actionManualQuery)
-        self.subMenu.addAction(self.actionResetManualQuery)
-
 
         #Build file menu
         self.menuFile.addAction(self.actionRefresh)
@@ -162,8 +145,6 @@ class Ui_MainWindow(object):
         self.menuFile.addAction(self.actionOptions)
         self.menuFile.addAction(self.actionClearLyricsCache)
         self.menuFile.addAction(self.actionPregenLyricsCache)
-        self.menuFile.addSeparator()
-        self.menuFile.addAction(self.subMenu.menuAction())
         self.menuFile.addSeparator()
         self.menuFile.addAction(self.actionQuit)
 
@@ -186,11 +167,7 @@ class Ui_MainWindow(object):
         QtCore.QObject.connect(self.actionOptions, QtCore.SIGNAL(_fromUtf8("triggered()")), self.UiFunctions.openOptionsWindow)
         QtCore.QObject.connect(self.actionClearLyricsCache, QtCore.SIGNAL(_fromUtf8("triggered()")), self.UiFunctions.clearLyricsCacheAction)
         QtCore.QObject.connect(self.actionPregenLyricsCache, QtCore.SIGNAL(_fromUtf8("triggered()")), self.UiFunctions.pregenLyricsCache)
-        QtCore.QObject.connect(self.actionManualQuery, QtCore.SIGNAL(_fromUtf8("triggered()")), self.UiFunctions.openManualQueryDialog)
-        QtCore.QObject.connect(self.actionResetManualQuery, QtCore.SIGNAL(_fromUtf8("triggered()")), self.UiFunctions.resetManualEntry)
-        QtCore.QObject.connect(self.actionSearch, QtCore.SIGNAL(_fromUtf8("triggered()")), self.UiFunctions.openSearchDialog)
         QtCore.QObject.connect(self.consoleO_ClearButton, QtCore.SIGNAL(_fromUtf8("clicked()")), self.UiFunctions.clear_console)
-        QtCore.QObject.connect(self.lyricsTextView, QtCore.SIGNAL(_fromUtf8("anchorClicked(QUrl)")), self.UiFunctions.setSearchResult)
         QtCore.QMetaObject.connectSlotsByName(self.MainWindow)
 
 
@@ -230,7 +207,6 @@ class Ui_MainWindow(object):
         self.consoleO_ClearButton.setText(_translate("MainWindow", "Clear", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.ConsoleTab), _translate("MainWindow", "Console", None))
         self.menuFile.setTitle(_translate("MainWindow", "File", None))
-        self.subMenu.setTitle(_translate("MainWindow", "Manual song control", None))
         self.menuHelp.setTitle(_translate("MainWindow", "Help", None))
         self.aboutMenuItem.setText(_translate("MainWindow", "About", None))
         self.actionQuit.setText(_translate("MainWindow", "Quit", None))
@@ -238,10 +214,6 @@ class Ui_MainWindow(object):
         self.actionOptions.setText(_translate("MainWindow", "Options", None))
         self.actionClearLyricsCache.setText(_translate("MainWindow", "Clear Lyrics Cache", None))
         self.actionPregenLyricsCache.setText(_translate("MainWindow", "Generate Lyrics Cache", None))
-
-        self.actionManualQuery.setText(_translate("MainWindow", "Set song manually", None))
-        self.actionResetManualQuery.setText(_translate("MainWindow", "Reset manual song", None))
-        self.actionSearch.setText(_translate("MainWindow", "Search for lyrics", None))
         self.Statusbar.setText(_translate("MainWindow", "Welcome to bLyrics", None))
 
 

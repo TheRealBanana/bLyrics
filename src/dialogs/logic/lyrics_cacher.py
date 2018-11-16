@@ -1,6 +1,7 @@
 import os
 import os.path
 import re
+import sys
 from base64 import urlsafe_b64encode#, urlsafe_b64decode
 
 #This folder is located two folder below the main src folder
@@ -8,7 +9,14 @@ from base64 import urlsafe_b64encode#, urlsafe_b64decode
 #Get the folder path two folders up, minus the filename = -3
 #Using os.getcwd() instead of the below works 90% of the time (problems arise with windows shortcuts without start-in dir set).
 #The below works 100% of the time unless someone messes with the source tree.
-BASEPATH = os.sep.join(re.split(re.escape(os.sep), os.path.realpath(__file__))[:-3])
+#
+#If we are running from the pyinstaller .exe we need to modify things
+if getattr(sys, 'frozen', False):
+    BASEPATH = os.sep.join(re.split(re.escape(os.sep), sys.executable)[:-1])
+else:
+    BASEPATH = os.sep.join(re.split(re.escape(os.sep), os.path.realpath(__file__))[:-3])
+# running live
+
 CACHEWRITEFOLDER = os.path.join(BASEPATH, ".lyricscache")
 
 BASE64TEMPLATE = "%(ARTIST)s___%(SONG)s"

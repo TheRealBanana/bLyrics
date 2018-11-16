@@ -3,7 +3,6 @@ import json
 import re
 from ..about_pane import *
 from ..options_dialog import *
-from ..manualQueryDialog import *
 from ..cachebuilder_progress_bar import Ui_cachebuilderProgressDialog
 from lyrics_downloader import threadedLyricsDownloader
 from lyrics_cacher import LyricsCacher
@@ -223,70 +222,6 @@ class UIFunctions(object):
             widget.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
         widget.setWindowIcon(QtGui.QIcon(":/icon/bLyrics.ico"))
         widget.exec_()
-
-    def openSearchDialog(self):
-        #Set tab to the search output before we do anything
-        self.UI.tabWidget.setCurrentIndex(1)
-        widget = QtGui.QDialog()
-        mQDialog = Ui_customQueryDialog()
-        return_data = []
-        mQDialog.setupUi(widget, return_data)
-        if _ALWAYS_ON_TOP_:
-            widget.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
-        widget.setWindowTitle(_translate("customQueryDialog", "Search for lyrics", None))
-        widget.setWindowIcon(QtGui.QIcon(":/icon/bLyrics.ico"))
-        widget.exec_()
-        #change to normal python strings
-        if len(return_data) > 0:
-            return_data = [str(z) for z in return_data]
-
-        #Now we get the first page of results in the form of a list where each item is a dictionary with three parts: Artist, Song Title, and URL.
-        if len(return_data) > 0:
-            search_results = self.lyricsProg.searchForLyrics(song=return_data[1], artist=return_data[0])
-        else:
-            search_results = ""
-        if len(search_results) > 0:
-            result_html_template = '''
-<p style="font-weight: normal; font-family: Tahoma, Geneva, sans-serif; font-size: 18px; font-weight: bold;">%s)<a href="%s"><span style="font-size: 14px;"> %s <span style="font-weight: normal;">by</span> %s</span></a></p>'''
-            html_body = ""
-            #We make an HTML page containing all the results for the user to select from.
-            #First we build up the body of our html using result_html as a template
-            for index, result_entry in enumerate(search_results):
-                combined_url = "#%s::%s::%s" % (result_entry["url"], result_entry["title"], result_entry["artist"])
-                html_body += result_html_template % (index+1, combined_url, result_entry["title"], result_entry["artist"])
-            #Now we generate the main html
-            main_html = '''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0//EN" "http://www.w3.org/TR/REC-html40/strict.dtd">
-<html><head><meta name="qrichtext" content="1" /><title>Search Results</title></head><body><p style="font-family: Tahoma, Geneva, sans-serif; font-weight: bold; font-size: 24px;">%s LYRIC RESULTS:</p>
-%s
-</body></html>''' % (len(search_results), html_body)
-            #And now we display the output to the user in the lyrics tab
-            self.UI.lyricsTextView.setHtml(_translate("MainWindow", main_html, None))
-
-    def resetManualEntry(self):
-        self.lyricsProg.resetManualEntry()
-        self.mainAppLoop()
-
-    def setSearchResult(self, url):
-        self.lyricsProg.manual_url_set(str(url.toString()[1:])) # cut off the beginning hash
-        self.mainAppLoop()
-
-    def openManualQueryDialog(self):
-        widget = QtGui.QDialog()
-        mQDialog = Ui_customQueryDialog()
-        return_data = []
-        mQDialog.setupUi(widget, return_data)
-        if _ALWAYS_ON_TOP_:
-            widget.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
-        widget.setWindowTitle(_translate("customQueryDialog", "Manual lyrics query", None))
-        widget.setWindowIcon(QtGui.QIcon(":/icon/bLyrics.ico"))
-        widget.exec_()
-        #change to normal python strings
-        return_data = [str(z) for z in return_data]
-        #Now we need to let fooBarLyrics.py know we have a manual query so it doesnt just change the song back when it senses the change
-        if len(return_data) > 0:
-            self.lyricsProg.manual_song_set(return_data)
-            #Now force the mainUI to update
-            self.mainAppLoop()
 
 
     def openAboutWindow(self):
