@@ -16,7 +16,7 @@ LYRICS_PROVIDER_VERSION="1.1"
 #before higher numbered providers. Put the really slow ones at the end if you want cache generation to be quick.
 #Otherwise make the most reliable (in terms of lyrical content) the first priority. Providers with the same priority
 #are not guaranteed to run in any specific order.
-LYRICS_PROVIDER_PRIORITY=2
+LYRICS_PROVIDER_PRIORITY=3
 
 
 #Just a quick little function to straighten out some of the escaped parenthesis before displaying them.
@@ -56,7 +56,7 @@ class LyricsProvider(object):
         surl = "http://www.songlyrics.com/index.php?section=search&searchW=%s"
         
         #First thing we are going to do is whip up a proper url with our search query in it
-        quotestr = _pUnescape(artist) + " " + _pUnescape(song)
+        quotestr = _pUnescape(song) + " " + _pUnescape(artist)
         query_data = urllib.quote_plus(quotestr)
         queryurl = surl % query_data
         
