@@ -16,7 +16,7 @@ LYRICS_PROVIDER_VERSION="1.1"
 #before higher numbered providers. Put the really slow ones at the end if you want cache generation to be quick.
 #Otherwise make the most reliable (in terms of lyrical content) the first priority. Providers with the same priority
 #are not guaranteed to run in any specific order.
-LYRICS_PROVIDER_PRIORITY=1
+LYRICS_PROVIDER_PRIORITY=2
 
 
 #Just a quick little function to straighten out some of the escaped parenthesis before displaying them.
@@ -77,7 +77,7 @@ class LyricsProvider(object):
             search_html = search_query.read()
             search_query.close()
         except:
-            return "A connection error has occurred."
+            return None
     
         #Some stuff needs the song/artist name to be clean
         clean_song = _pUnescape(song)

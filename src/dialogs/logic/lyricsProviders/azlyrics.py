@@ -1,0 +1,61 @@
+import urllib
+import urllib2
+import re
+from difflib import SequenceMatcher as sMatcher
+
+LYRICS_PROVIDER_NAME="AZlyrics"
+LYRICS_PROVIDER_VERSION="1.0"
+#Lyrics provider priority allows bLyrics to order lyrics providers properly. Lower numbered providers will be used
+#before higher numbered providers. Put the really slow ones at the end if you want cache generation to be quick.
+#Otherwise make the most reliable (in terms of lyrical content) the first priority. Providers with the same priority
+#are not guaranteed to run in any specific order.
+LYRICS_PROVIDER_PRIORITY=1
+
+class LyricsProvider(object):
+    def __init__(self, MASTER_RATIO=0.65):
+        self._MASTER_RATIO = MASTER_RATIO
+        self.LYRICS_PROVIDER_NAME = LYRICS_PROVIDER_NAME
+        self.LYRICS_PROVIDER_VERSION = LYRICS_PROVIDER_VERSION
+
+    def getLyrics(self, song, artist):
+        surl = "https://search.azlyrics.com/search.php?q=%s&w=songs&p=1"
+        query_data = urllib.quote_plus(artist + " " + song)
+        queryurl = surl % query_data
+
+        #Now lets execute the search and get the html returned so we can work on it
+        downloaderHeaders = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.5",
+            "Accept-Encoding": "deflate",
+            "DNT": "1",
+            "Connection": "keep-alive",
+        }
+
+        try:
+            request = urllib2.Request(queryurl, None, downloaderHeaders)
+            search_query = urllib2.urlopen(request)
+            search_html = search_query.read()
+            search_query.close()
+        except:
+            return None
+
+        search_results = re.search("^.*Song results.*?<td class=\"text-left visitedlyr\">(.*?)(:?</table>).*</html>$", search_html.strip(), re.S|re.MULTILINE).group(1).split("<td class=\"text-left visitedlyr\">")
+        if search_results is not None:
+            for idx, result in enumerate(search_results):
+                result_url, result_songartist = re.search("%s\..*?<a href=\"(.*?)\" target=\"_blank\">((?:.*?)by(?:.*))" % str(idx+1), result).groups()
+                result_song = re.search("<b>(.*?)</b></a>", result_songartist).group(1)
+                result_artist = re.search("</a>\s+by\s+<b>(.*?)</b><br>", result_songartist).group(1)
+
+                #Check if this result is the right one
+                #This is where we will need the SequenceMatcher to allow for slight differences. TODO
+                if sMatcher(None, song, result_song).ratio() > self._MASTER_RATIO and sMatcher(None, artist, result_artist).ratio() > self._MASTER_RATIO:
+                    #Time to get the lyrics
+                    lyrics_request = urllib2.Request(result_url, None, downloaderHeaders)
+                    lyrics_query = urllib2.urlopen(lyrics_request)
+                    lyrics_html = lyrics_query.read()
+                    lyrics_query.close()
+                    #We're not a third party lyrics provider rite??? Psshhhhh
+                    warnbanner = "<!-- Usage of azlyrics.com content by any third-party lyrics provider is prohibited by our licensing agreement. Sorry about that. -->"
+                    return re.search("<div>.*?%s(.*?)</div>" % warnbanner, lyrics_html, re.S|re.I).group(1).strip()
+        return None
