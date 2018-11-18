@@ -37,7 +37,10 @@ class threadedCacheGenerator(QtCore.QObject):
         #Check our cache, and download if missing
         for p in self.providers:
             if self.quitting is True: return None, None
-            lyrics = p.getLyrics(song, artist)
+            try:
+                lyrics = p.getLyrics(song, artist)
+            except:
+                continue
             if lyrics is not None:
                 try:
                     lyrics = lyrics.encode("utf8")
@@ -156,6 +159,7 @@ class Ui_cachebuilderProgressDialog(object):
     @staticmethod
     def printCallback(s):
         print s
+        QtGui.QApplication.processEvents()
 
     #Signal bucket brigade, only for the most pr0 coders ofc
     def generationFinished(self):

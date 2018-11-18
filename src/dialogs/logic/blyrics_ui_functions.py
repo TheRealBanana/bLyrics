@@ -111,7 +111,7 @@ class UIFunctions(object):
     def __init__(self, UiReference):
         self.UI = UiReference
         self.optionsWindowui = Ui_OptionsDialog()
-        self.output = [dTime.fromtimestamp(tTime()).strftime('%d/%b/%Y-%I:%M:%S %p:   ') + "PROGRAM_INIT"]
+        self.output = [dTime.fromtimestamp(tTime()).strftime('%d/%b/%Y-%I:%M:%S %p:   ') + "bLyrics Started"]
         self.windowTitle = None
         self.timer = None
         self.is_connected = False
@@ -400,7 +400,34 @@ p, li { white-space: pre-wrap; }
 </style></head><body style=" font-family:\'MS Shell Dlg 2\'; font-size:8.25pt; font-weight:400; font-style:normal;">
 <p style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;">%s</p></body></html>
 ''' % final_output
+            #Set our cursor to the bottom of the console so we scroll with the output, but only if we are already scrolled to the bottom
+            #I hate it when I'm trying to read the output of someone program and it resets on a new output.
+            #If the user is scrolled all the way down keep scrolling down, otherwise dont update
+            #Need to get the console output vertical scrollbar reference
+            vscrollbar = self.UI.consoleOutput.verticalScrollBar()
+            scrollmax = vscrollbar.maximum()
+            scrollval = vscrollbar.value()
+            #Cursor infos incase we have a selection we want to preserve
+            cursor = self.UI.consoleOutput.textCursor()
+            cursorstart = cursor.selectionStart()
+            cursorend = cursor.selectionEnd()
+
+            #Updateing the HTML resets out view to the start so we had to save those before
             self.UI.consoleOutput.setHtml(_translate("MainWindow", html, None))
+
+            #did we have any text selection we should preserve?
+            if cursorstart != cursorend:
+                cursor.setPosition(cursorstart, QtGui.QTextCursor.MoveAnchor)
+                cursor.setPosition(cursorend, QtGui.QTextCursor.KeepAnchor)
+                self.UI.consoleOutput.setTextCursor(cursor)
+
+            #close enough for government work!
+            if scrollmax - scrollval < 5:
+                self.UI.consoleOutput.verticalScrollBar().setSliderPosition(self.UI.consoleOutput.verticalScrollBar().maximum())
+            elif scrollval != 0:
+                self.UI.consoleOutput.verticalScrollBar().setSliderPosition(scrollval)
+
+            self.UI.consoleOutput.setFocus()
 
     def setWindowTitle(self, text):
         self.UI.MainWindow.setWindowTitle(_translate("MainWindow", text, None))

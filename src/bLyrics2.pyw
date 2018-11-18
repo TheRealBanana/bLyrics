@@ -1,5 +1,5 @@
 from dialogs.blyrics_ui import *
-from PyQt4 import QtGui
+from PyQt4 import QtGui, QtCore
 import sys
 
 #Set default encoding to utf8
@@ -9,17 +9,18 @@ sys.setdefaultencoding('utf8')
 
 #Trying something new with the stdout,stderr so I can see it in both the cmdline and UI console.
 class OUTMETHODS(object):
-    def __init__(self, console_write_func, stdoutfunc, stderrfunc):
+    def __init__(self, MainWindowRef, stdoutfunc, stderrfunc):
         self.console_out = True
         self.cmd_out = True
-        self.console_write_func = console_write_func
+        self.MainWindowRef = MainWindowRef
         self.stdout = self.STDOUT(self)
         self.stderr = self.STDERR(self)
         self.stdoutfunc = stdoutfunc
         self.stderrfunc = stderrfunc
 
     def writeout(self, mode, text):
-        if self.console_out: self.console_write_func(text)
+        if self.console_out:
+            self.MainWindowRef.emit(QtCore.SIGNAL("consoleWrite"), text)
         if self.cmd_out:
             if mode == "stdout":
                 self.stdoutfunc.write(text)
@@ -43,14 +44,18 @@ if __name__ == "__main__":
     MainWindow = QtGui.QMainWindow()
     ui = Ui_MainWindow(MainWindow)
     #Set up our standard out and error before setting up the UI
-    outfuncs = OUTMETHODS(ui.UiFunctions.write, sys.stdout, sys.stderr)
+    outfuncs = OUTMETHODS(MainWindow, sys.stdout, sys.stderr)
+    QtCore.QObject.connect(MainWindow, QtCore.SIGNAL("consoleWrite"), ui.UiFunctions.write)
+
     out = outfuncs.stdout
     err = outfuncs.stderr
     sys.stdout = out
     sys.stderr = err
     ui.setupUi()
+
     # Hook into the app's quiting sequence so it saves our settings before it quits
     app.aboutToQuit.connect(ui.UiFunctions.saveSettings)
+
     # Before we get going we get the user setting for _ALWAYS_ON_TOP
     _ALWAYS_ON_TOP_ = False
     if ui.UiFunctions.testSettingGroup("Options") is True:
@@ -61,5 +66,4 @@ if __name__ == "__main__":
     if _ALWAYS_ON_TOP_:
         MainWindow.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
     MainWindow.show()
-
     sys.exit(app.exec_())
