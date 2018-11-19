@@ -183,6 +183,7 @@ class Ui_MainWindow(object):
         self.UiFunctions.setLyricsText("Not connected to Foobar2000's Web server, press check your settings and make sure Foobar is running.")
         self.UiFunctions.setWindowTitle("bLyrics  ::  Not Connected - Press Refresh or Connect")
         self.UiFunctions.setStatusbarText("Foobar2000 Web Interface Not Found")
+        self.UiFunctions.write("bLyrics Started")
 
         #Set up the internal loop that checks for a new song and retrieves lyrics when needed.
         if self.UiFunctions.timer is None:

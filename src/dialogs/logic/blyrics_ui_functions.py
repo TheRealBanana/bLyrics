@@ -111,7 +111,6 @@ class UIFunctions(object):
     def __init__(self, UiReference):
         self.UI = UiReference
         self.optionsWindowui = Ui_OptionsDialog()
-        self.output = [dTime.fromtimestamp(tTime()).strftime('%d/%b/%Y-%I:%M:%S %p:   ') + "bLyrics Started"]
         self.windowTitle = None
         self.timer = None
         self.is_connected = False
@@ -373,7 +372,6 @@ class UIFunctions(object):
         self.masterMatchRatio = lwop["masterMatchRatio"]
 
     def clear_console(self):
-        self.output = []
         html = '''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0//EN" "http://www.w3.org/TR/REC-html40/strict.dtd">
 <html><head><meta name="qrichtext" content="1" /><style type="text/css">
 p, li { white-space: pre-wrap; }
@@ -387,19 +385,7 @@ p, li { white-space: pre-wrap; }
         #That way any time a print or error occurs it will be output to this function, which will write to the console tab.
         if text.strip() != "":
             timestamp = dTime.fromtimestamp(tTime()).strftime('%d/%b/%Y-%I:%M:%S %p:   ')
-            text = timestamp + text
-            self.output.append(text)
-            final_output = ""
-            for entry in self.output:
-                final_output = final_output + str(entry) + "<br>"
-
-
-            html = '''<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0//EN" "http://www.w3.org/TR/REC-html40/strict.dtd">
-<html><head><meta name="qrichtext" content="1" /><style type="text/css">
-p, li { white-space: pre-wrap; }
-</style></head><body style=" font-family:\'MS Shell Dlg 2\'; font-size:8.25pt; font-weight:400; font-style:normal;">
-<p style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;">%s</p></body></html>
-''' % final_output
+            text = timestamp + text + "\n"
             #Set our cursor to the bottom of the console so we scroll with the output, but only if we are already scrolled to the bottom
             #I hate it when I'm trying to read the output of someone program and it resets on a new output.
             #If the user is scrolled all the way down keep scrolling down, otherwise dont update
@@ -412,8 +398,9 @@ p, li { white-space: pre-wrap; }
             cursorstart = cursor.selectionStart()
             cursorend = cursor.selectionEnd()
 
-            #Updateing the HTML resets out view to the start so we had to save those before
-            self.UI.consoleOutput.setHtml(_translate("MainWindow", html, None))
+            #Insert text at the very bottom
+            cursor.movePosition(QtGui.QTextCursor.End)
+            cursor.insertText(text)
 
             #did we have any text selection we should preserve?
             if cursorstart != cursorend:
