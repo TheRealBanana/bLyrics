@@ -113,6 +113,7 @@ class UIFunctions(object):
     def __init__(self, UiReference):
         self.UI = UiReference
         self.optionsWindowui = Ui_OptionsDialog()
+        self.searchWidget = None
         self.windowTitle = None
         self.timer = None
         self.is_connected = False
@@ -529,12 +530,12 @@ p, li { white-space: pre-wrap; }
         self.cachebuilderui.widget.close()
 
     def searchLyricsAction(self):
-        widget = QtGui.QDialog()
+        self.searchWidget = QtGui.QDialog()
         searchdialog = Ui_lyricsSearchDialog()
-        searchdialog.setupUi(widget)
+        searchdialog.setupUi(self.searchWidget)
         searchfunctionsinstance = lyricsSearchFunctions(searchdialog)
         if _ALWAYS_ON_TOP_:
-            widget.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
-        widget.setWindowIcon(QtGui.QIcon(":/icon/bLyrics.ico"))
+            self.searchWidget.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
+        self.searchWidget.setWindowIcon(QtGui.QIcon(":/icon/bLyrics.ico"))
         searchdialog.searchButton.setFocus()
-        widget.exec_()
+        self.searchWidget.show()
