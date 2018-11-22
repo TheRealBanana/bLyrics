@@ -126,6 +126,9 @@ class Ui_MainWindow(object):
         self.actionRefresh = QtGui.QAction(self.MainWindow)
         self.actionRefresh.setObjectName(_fromUtf8("actionRefresh"))
 
+        self.actionSearchLyrics = QtGui.QAction(self.MainWindow)
+        self.actionSearchLyrics.setObjectName(_fromUtf8("actionSearchLyrics"))
+
         self.actionQuit = QtGui.QAction(self.MainWindow)
         self.actionQuit.setObjectName(_fromUtf8("actionQuit"))
 
@@ -143,6 +146,8 @@ class Ui_MainWindow(object):
         self.menuFile.addAction(self.actionRefresh)
         self.menuFile.addSeparator()
         self.menuFile.addAction(self.actionOptions)
+        self.menuFile.addSeparator()
+        self.menuFile.addAction(self.actionSearchLyrics)
         self.menuFile.addAction(self.actionClearLyricsCache)
         self.menuFile.addAction(self.actionPregenLyricsCache)
         self.menuFile.addSeparator()
@@ -159,6 +164,7 @@ class Ui_MainWindow(object):
 
         #Set up our slot connections
         QtCore.QObject.connect(self.RefreshLyricsButton, QtCore.SIGNAL("clicked()"), self.UiFunctions.refreshLyricsButtonAction)
+        QtCore.QObject.connect(self.actionSearchLyrics, QtCore.SIGNAL("triggered()"), self.UiFunctions.searchLyricsAction)
         QtCore.QObject.connect(self.editLyricsButton, QtCore.SIGNAL("clicked()"), self.UiFunctions.editLyricsButtonAction)
         QtCore.QObject.connect(self.tabWidget, QtCore.SIGNAL(_fromUtf8("currentChanged(int)")), self.MainStatusWebView.reload)
         QtCore.QObject.connect(self.aboutMenuItem, QtCore.SIGNAL(_fromUtf8("triggered()")), self.UiFunctions.openAboutWindow)
@@ -216,5 +222,6 @@ class Ui_MainWindow(object):
         self.actionClearLyricsCache.setText(_translate("MainWindow", "Clear Lyrics Cache", None))
         self.actionPregenLyricsCache.setText(_translate("MainWindow", "Generate Lyrics Cache", None))
         self.Statusbar.setText(_translate("MainWindow", "Welcome to bLyrics", None))
+        self.actionSearchLyrics.setText(_translate("MainWindow", "Search Lyrics Cache", None))
 
 

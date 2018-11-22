@@ -100,7 +100,7 @@
    <item>
     <widget class="QTextBrowser" name="resultLyricsView">
      <property name="sizePolicy">
-      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+      <sizepolicy hsizetype="MinimumExpanding" vsizetype="Expanding">
        <horstretch>4</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
@@ -118,22 +118,5 @@
   <tabstop>resultLyricsView</tabstop>
  </tabstops>
  <resources/>
- <connections>
-  <connection>
-   <sender>searchButton</sender>
-   <signal>clicked()</signal>
-   <receiver>lyricsSearchDialog</receiver>
-   <slot>close()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>184</x>
-     <y>142</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>309</x>
-     <y>0</y>
-    </hint>
-   </hints>
-  </connection>
- </connections>
+ <connections/>
 </ui>

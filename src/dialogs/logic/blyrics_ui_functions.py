@@ -4,6 +4,8 @@ import re
 from ..about_pane import *
 from ..options_dialog import *
 from ..cachebuilder_progress_bar import Ui_cachebuilderProgressDialog
+from lyrics_search_functions import lyricsSearchFunctions
+from ..lyrics_search_dialog import Ui_lyricsSearchDialog
 from lyrics_downloader import threadedLyricsDownloader
 from lyrics_cacher import LyricsCacher
 from PyQt4 import QtCore, QtGui
@@ -525,3 +527,14 @@ p, li { white-space: pre-wrap; }
         print "Done generating cache files."
         QtGui.QMessageBox.information(self.UI.MainWindow, "Cache Generation Complete", "Finished generating cache files. Check the console tab for for additional information.", QtGui.QMessageBox.Ok)
         self.cachebuilderui.widget.close()
+
+    def searchLyricsAction(self):
+        widget = QtGui.QDialog()
+        searchdialog = Ui_lyricsSearchDialog()
+        searchdialog.setupUi(widget)
+        searchfunctionsinstance = lyricsSearchFunctions(searchdialog)
+        if _ALWAYS_ON_TOP_:
+            widget.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
+        widget.setWindowIcon(QtGui.QIcon(":/icon/bLyrics.ico"))
+        searchdialog.searchButton.setFocus()
+        widget.exec_()
