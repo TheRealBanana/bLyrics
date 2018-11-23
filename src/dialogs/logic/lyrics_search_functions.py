@@ -6,6 +6,10 @@ from base64 import urlsafe_b64decode
 from lyrics_cacher import LyricsCacher, FILEEXTENSION, CACHEWRITEFOLDER
 
 MASTER_RATIO = 0.65
+START_HIGHLIGHT = '<span style="background-color: #FFFF00">'
+END_HIGHLIGHT = "</span>"
+#START_HIGHLIGHT = "<b>"
+#END_HIGHLIGHT = "</b>"
 
 class searchJob(QtCore.QObject):
     def __init__(self, pagereference, searchparams, filelist):
@@ -16,7 +20,6 @@ class searchJob(QtCore.QObject):
         super(searchJob, self).__init__()
 
     def startSearch(self):
-        print "Starting search... Not really tho."
         idx = 0
         while self.quitting is False and idx < len(self.filelist):
             b64part = self.filelist[idx][:-len(FILEEXTENSION)]
@@ -25,12 +28,12 @@ class searchJob(QtCore.QObject):
             #Reading the inside of every file is going to be slow so we throw out results by their filename when we can
             #Ignore any songs that don't match our song/artist parameters (if we have them)
             if len(self.searchparams["song"]) > 0:
-                if sMatcher(None, self.searchparams["song"], song).ratio() < MASTER_RATIO:
+                if sMatcher(None, str(self.searchparams["song"]).lower(), song.lower()).ratio() < MASTER_RATIO:
                     idx += 1
                     continue
 
             if len(self.searchparams["artist"]) > 0:
-                if sMatcher(None, self.searchparams["artist"], artist).ratio() < MASTER_RATIO:
+                if sMatcher(None, str(self.searchparams["artist"]).lower(), artist.lower()).ratio() < MASTER_RATIO:
                     idx += 1
                     continue
 
@@ -39,24 +42,29 @@ class searchJob(QtCore.QObject):
             #test for that now. If we don't, we just add this to the results.
             lyricsfilepath = os.path.join(CACHEWRITEFOLDER, self.filelist[idx])
             with open(lyricsfilepath, 'r') as lyricsfile:
-                lyrics = lyricsfile.read()
+                lyrics = unicode(lyricsfile.read()).decode("utf8")
             #Match our substring, going with exact matches cause using our SequenceMatcher against every single word
             #in the lyrics sounds like a very bad idea but we may investigate it later if required.
             if len(self.searchparams["searchString"]) > 0:
                 if str(self.searchparams["searchString"]).lower() not in lyrics.lower():
                     idx += 1
                     continue
+                else:
+                    #Highlight our search string and fix line breaks
+                    hledstring = START_HIGHLIGHT + str(self.searchparams["searchString"]) + END_HIGHLIGHT
+                    lyrics = re.sub(re.escape(str(self.searchparams["searchString"])), hledstring, lyrics, flags=re.I)
+                    lyrics = re.sub("\n", "<br>", lyrics)
 
-            print "Match: %s - %s" % (song, artist)
-            print idx
+            #If we got this far we have a good match, lets add it to our page reference.
+            listentryitem = QtGui.QListWidgetItem("%s by %s" % (song, artist))
+            listentryitem.setData(QtCore.Qt.UserRole, lyrics)
+            listwidgetref = self.pagereference.findChild(QtGui.QListWidget, "resultsListWidget")
+            listwidgetref.addItem(listentryitem)
+
             QtGui.QApplication.processEvents()
             idx += 1
 
         self.emit(QtCore.SIGNAL("SearchFinished"))
-
-
-
-
 
 
 class lyricsSearchFunctions(object):
@@ -90,6 +98,9 @@ class lyricsSearchFunctions(object):
         print "Search complete!"
         self.cancelSearchJob()
 
+    def listItemClicked(self, listWidgetItem):
+        self.searchDialog.resultLyricsView.setHtml(listWidgetItem.data(QtCore.Qt.UserRole).toPyObject())
+
     def createSearchJob(self, pagereference):
         #Gather our search parameters
         searchparams = {}
@@ -107,26 +118,12 @@ class lyricsSearchFunctions(object):
         #Swap our search button to a cancel button
         QtCore.QObject.disconnect(self.searchDialog.searchButton, QtCore.SIGNAL("clicked()"), self.searchButtonClicked)
         QtCore.QObject.connect(self.searchDialog.searchButton, QtCore.SIGNAL("clicked()"), self.cancelSearchJob)
-
         self.searchDialog.searchButton.setText("Cancel Search")
 
     def searchButtonClicked(self):
         #Do nothing for no-input searches
         if len(self.searchDialog.songNameInput.text()) + len(self.searchDialog.artistNameInput.text()) + len(self.searchDialog.lyricsSearchStringInput.text()) == 0:
             return
-        #The basic idear is this:
-        #On click we create a new search results tab and start to populate it with answers
-        #This population should be done with QThread if possible
-        #During population (searching) we need to disable the tabwidget
-        #We also change the search button to a cancel button
-        #
-        #or
-        #
-        #Instead of locking the UI (disableing the tabwidget) we can create a population thread and then connection
-        #slots inside that specific thread to slots for the specific QListWidget for the search tab we created.
-        #Then a user can change tabs if they want and the correct widget will still be updated with search results
-        #
-        #The second idea allows multiple searches at once and is generally less intrusive to the user (I think).
 
         #Each result tab is a vertical layout with a Qlabel at the top and a QListWidget below that with our results.
         #QLabel at the top will contain the search parameters
@@ -142,16 +139,16 @@ class lyricsSearchFunctions(object):
         verticallayout.addWidget(searchParamsLabel)
         resultsListWidget = QtGui.QListWidget(newtab)
         resultsListWidget.setObjectName("resultsListWidget")
+        resultsListWidget.setSortingEnabled(False)
+        #This signal should be deleted when the page is deleted so we don't need to worry about disconnecting
+        QtCore.QObject.connect(resultsListWidget, QtCore.SIGNAL("itemClicked(QListWidgetItem*)"), self.listItemClicked)
         verticallayout.addWidget(resultsListWidget)
-        resultsListWidget.addItem("Test Item %s " % str(newtabindex+1))
-        resultsListWidget.addItem("Test Item %s " % str(newtabindex+1))
         #Thought about using the actual search parameters for the tab title but it becomes difficult to access
         #the tabs when their titles are too long. This works fine for what we need.
         tabtitle = "Search Query %s" % str(newtabindex+1)
         self.searchDialog.leftTabWidget_Results.addTab(newtab, tabtitle)
         self.searchDialog.leftTabWidget_Results.setCurrentIndex(newtabindex)
         self.createSearchJob(newtab)
-
 
     def closeTab(self, tabIndex):
         #Dont allow closing a tab with a search job active on it
