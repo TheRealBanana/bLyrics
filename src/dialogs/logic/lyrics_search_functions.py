@@ -1,13 +1,62 @@
+import os.path
 from PyQt4 import QtCore, QtGui
+from difflib import SequenceMatcher as sMatcher
+import re
+from base64 import urlsafe_b64decode
+from lyrics_cacher import LyricsCacher, FILEEXTENSION, CACHEWRITEFOLDER
+
+MASTER_RATIO = 0.65
 
 class searchJob(QtCore.QObject):
-    def __init__(self, pagereference):
+    def __init__(self, pagereference, searchparams, filelist):
         self.pagereference = pagereference
+        self.filelist = filelist
+        self.searchparams = searchparams
         self.quitting = False
         super(searchJob, self).__init__()
 
     def startSearch(self):
         print "Starting search... Not really tho."
+        idx = 0
+        while self.quitting is False and idx < len(self.filelist):
+            b64part = self.filelist[idx][:-len(FILEEXTENSION)]
+            decoded = urlsafe_b64decode(b64part)
+            artist, song = re.split("___", decoded)
+            #Reading the inside of every file is going to be slow so we throw out results by their filename when we can
+            #Ignore any songs that don't match our song/artist parameters (if we have them)
+            if len(self.searchparams["song"]) > 0:
+                if sMatcher(None, self.searchparams["song"], song).ratio() < MASTER_RATIO:
+                    idx += 1
+                    continue
+
+            if len(self.searchparams["artist"]) > 0:
+                if sMatcher(None, self.searchparams["artist"], artist).ratio() < MASTER_RATIO:
+                    idx += 1
+                    continue
+
+            #If we got this far that means our song/artist must have either matched or werent included.
+            #We need to load the lyrics for this song. If we have a searchString in our search params will
+            #test for that now. If we don't, we just add this to the results.
+            lyricsfilepath = os.path.join(CACHEWRITEFOLDER, self.filelist[idx])
+            with open(lyricsfilepath, 'r') as lyricsfile:
+                lyrics = lyricsfile.read()
+            #Match our substring, going with exact matches cause using our SequenceMatcher against every single word
+            #in the lyrics sounds like a very bad idea but we may investigate it later if required.
+            if len(self.searchparams["searchString"]) > 0:
+                if str(self.searchparams["searchString"]).lower() not in lyrics.lower():
+                    idx += 1
+                    continue
+
+            print "Match: %s - %s" % (song, artist)
+            print idx
+            QtGui.QApplication.processEvents()
+            idx += 1
+
+        self.emit(QtCore.SIGNAL("SearchFinished"))
+
+
+
+
 
 
 class lyricsSearchFunctions(object):
@@ -16,6 +65,7 @@ class lyricsSearchFunctions(object):
         self.searchThread = None
         self.searchJobTask = None
         self.activeSearchJobWidget = None
+        self.lyricsCacherRef = LyricsCacher()
         self.setupConnections()
 
     def setupConnections(self):
@@ -29,22 +79,35 @@ class lyricsSearchFunctions(object):
             self.searchThread.wait()
             if self.searchJobTask is not None:
                 QtCore.QObject.disconnect(self.searchThread, QtCore.SIGNAL("started()"), self.searchJobTask.startSearch)
+                QtCore.QObject.disconnect(self.searchJobTask, QtCore.SIGNAL("workFinished()"), self.searchThread.quit)
+                QtCore.QObject.disconnect(self.searchJobTask, QtCore.SIGNAL("SearchFinished"), self.searchJobFinished)
         self.activeSearchJobWidget = None
         QtCore.QObject.disconnect(self.searchDialog.searchButton, QtCore.SIGNAL("clicked()"), self.cancelSearchJob)
         QtCore.QObject.connect(self.searchDialog.searchButton, QtCore.SIGNAL("clicked()"), self.searchButtonClicked)
         self.searchDialog.searchButton.setText("Search Lyrics Cache")
 
+    def searchJobFinished(self):
+        print "Search complete!"
+        self.cancelSearchJob()
+
     def createSearchJob(self, pagereference):
+        #Gather our search parameters
+        searchparams = {}
+        searchparams["song"] = self.searchDialog.songNameInput.text()
+        searchparams["artist"] = self.searchDialog.artistNameInput.text()
+        searchparams["searchString"] = self.searchDialog.lyricsSearchStringInput.text()
         self.searchThread = QtCore.QThread()
-        self.searchJobTask = searchJob(pagereference)
+        self.searchJobTask = searchJob(pagereference, searchparams, self.lyricsCacherRef.getLyricsFileList())
         self.searchJobTask.moveToThread(self.searchThread)
         QtCore.QObject.connect(self.searchThread, QtCore.SIGNAL("started()"), self.searchJobTask.startSearch)
         QtCore.QObject.connect(self.searchJobTask, QtCore.SIGNAL("workFinished()"), self.searchThread.quit)
+        QtCore.QObject.connect(self.searchJobTask, QtCore.SIGNAL("SearchFinished"), self.searchJobFinished)
         self.searchThread.start()
         self.activeSearchJobWidget = pagereference
         #Swap our search button to a cancel button
         QtCore.QObject.disconnect(self.searchDialog.searchButton, QtCore.SIGNAL("clicked()"), self.searchButtonClicked)
         QtCore.QObject.connect(self.searchDialog.searchButton, QtCore.SIGNAL("clicked()"), self.cancelSearchJob)
+
         self.searchDialog.searchButton.setText("Cancel Search")
 
     def searchButtonClicked(self):
