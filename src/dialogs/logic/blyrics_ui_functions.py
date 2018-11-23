@@ -5,7 +5,7 @@ from ..about_pane import *
 from ..options_dialog import *
 from ..cachebuilder_progress_bar import Ui_cachebuilderProgressDialog
 from lyrics_search_functions import lyricsSearchFunctions
-from ..lyrics_search_dialog import Ui_lyricsSearchDialog
+from ..lyrics_search_dialog import Ui_lyricsSearchDialog, closableDialog
 from lyrics_downloader import threadedLyricsDownloader
 from lyrics_cacher import LyricsCacher
 from PyQt4 import QtCore, QtGui
@@ -536,12 +536,15 @@ p, li { white-space: pre-wrap; }
             self.searchWidget.deleteLater()
             self.searchWidget = None
             self.searchfunctionsinstance = None
-        self.searchWidget = QtGui.QDialog()
+        self.searchWidget = closableDialog()
         searchdialog = Ui_lyricsSearchDialog()
         searchdialog.setupUi(self.searchWidget)
         self.searchfunctionsinstance = lyricsSearchFunctions(searchdialog)
         if _ALWAYS_ON_TOP_:
             self.searchWidget.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
+        QtCore.QObject.connect(self.searchWidget, QtCore.SIGNAL("SearchDialogClosing"), self.searchfunctionsinstance.closeDialog)
         self.searchWidget.setWindowIcon(QtGui.QIcon(":/icon/bLyrics.ico"))
+        self.searchWidget.setWindowTitle("Search Lyrics Cache")
         searchdialog.searchButton.setFocus()
         self.searchWidget.show()
+

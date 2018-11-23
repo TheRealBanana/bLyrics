@@ -22,6 +22,14 @@ except AttributeError:
     def _translate(context, text, disambig):
         return QtGui.QApplication.translate(context, text, disambig)
 
+class closableDialog(QtGui.QDialog):
+    def __init__(self, parent=None):
+        super(closableDialog, self).__init__(parent)
+    def closeEvent(self, QCloseEvent):
+        self.emit(QtCore.SIGNAL("SearchDialogClosing"))
+        QCloseEvent.accept()
+
+
 class Ui_lyricsSearchDialog(object):
     def setupUi(self, lyricsSearchDialog):
         self.widget = lyricsSearchDialog
@@ -90,8 +98,6 @@ class Ui_lyricsSearchDialog(object):
         lyricsSearchDialog.setTabOrder(self.lyricsSearchStringInput, self.searchButton)
         lyricsSearchDialog.setTabOrder(self.searchButton, self.leftTabWidget_Results)
         lyricsSearchDialog.setTabOrder(self.leftTabWidget_Results, self.resultLyricsView)
-
-
 
     def retranslateUi(self, lyricsSearchDialog):
         lyricsSearchDialog.setWindowTitle(_translate("lyricsSearchDialog", "Dialog", None))

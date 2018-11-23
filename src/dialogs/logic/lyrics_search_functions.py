@@ -1,13 +1,51 @@
 from PyQt4 import QtCore, QtGui
 
+class searchJob(QtCore.QObject):
+    def __init__(self, pagereference):
+        self.pagereference = pagereference
+        self.quitting = False
+        super(searchJob, self).__init__()
+
+    def startSearch(self):
+        print "Starting search... Not really tho."
+
+
 class lyricsSearchFunctions(object):
     def __init__(self, searchDialog):
         self.searchDialog = searchDialog
+        self.searchThread = None
+        self.searchJobTask = None
+        self.activeSearchJobWidget = None
         self.setupConnections()
 
     def setupConnections(self):
         QtCore.QObject.connect(self.searchDialog.searchButton, QtCore.SIGNAL("clicked()"), self.searchButtonClicked)
         QtCore.QObject.connect(self.searchDialog.leftTabWidget_Results, QtCore.SIGNAL("tabCloseRequested(int)"), self.closeTab)
+
+    def cancelSearchJob(self):
+        if self.searchThread is not None:
+            self.searchJobTask.quitting = True
+            self.searchThread.quit()
+            self.searchThread.wait()
+            if self.searchJobTask is not None:
+                QtCore.QObject.disconnect(self.searchThread, QtCore.SIGNAL("started()"), self.searchJobTask.startSearch)
+        self.activeSearchJobWidget = None
+        QtCore.QObject.disconnect(self.searchDialog.searchButton, QtCore.SIGNAL("clicked()"), self.cancelSearchJob)
+        QtCore.QObject.connect(self.searchDialog.searchButton, QtCore.SIGNAL("clicked()"), self.searchButtonClicked)
+        self.searchDialog.searchButton.setText("Search Lyrics Cache")
+
+    def createSearchJob(self, pagereference):
+        self.searchThread = QtCore.QThread()
+        self.searchJobTask = searchJob(pagereference)
+        self.searchJobTask.moveToThread(self.searchThread)
+        QtCore.QObject.connect(self.searchThread, QtCore.SIGNAL("started()"), self.searchJobTask.startSearch)
+        QtCore.QObject.connect(self.searchJobTask, QtCore.SIGNAL("workFinished()"), self.searchThread.quit)
+        self.searchThread.start()
+        self.activeSearchJobWidget = pagereference
+        #Swap our search button to a cancel button
+        QtCore.QObject.disconnect(self.searchDialog.searchButton, QtCore.SIGNAL("clicked()"), self.searchButtonClicked)
+        QtCore.QObject.connect(self.searchDialog.searchButton, QtCore.SIGNAL("clicked()"), self.cancelSearchJob)
+        self.searchDialog.searchButton.setText("Cancel Search")
 
     def searchButtonClicked(self):
         #Do nothing for no-input searches
@@ -42,16 +80,23 @@ class lyricsSearchFunctions(object):
         resultsListWidget = QtGui.QListWidget(newtab)
         resultsListWidget.setObjectName("resultsListWidget")
         verticallayout.addWidget(resultsListWidget)
-        resultsListWidget.addItem("Test Item 1 %s " % str(newtabindex+1))
-        resultsListWidget.addItem("Test Item 2 %s " % str(newtabindex+1))
+        resultsListWidget.addItem("Test Item %s " % str(newtabindex+1))
+        resultsListWidget.addItem("Test Item %s " % str(newtabindex+1))
         #Thought about using the actual search parameters for the tab title but it becomes difficult to access
         #the tabs when their titles are too long. This works fine for what we need.
         tabtitle = "Search Query %s" % str(newtabindex+1)
         self.searchDialog.leftTabWidget_Results.addTab(newtab, tabtitle)
         self.searchDialog.leftTabWidget_Results.setCurrentIndex(newtabindex)
+        self.createSearchJob(newtab)
 
 
     def closeTab(self, tabIndex):
-        #Deleting the main widget should clean up any connections we made to it and its sub-widgets
-        self.searchDialog.leftTabWidget_Results.widget(tabIndex).deleteLater()
-        self.searchDialog.leftTabWidget_Results.removeTab(tabIndex)
+        #Dont allow closing a tab with a search job active on it
+        activeSearchJobTabIndex = self.searchDialog.leftTabWidget_Results.indexOf(self.activeSearchJobWidget)
+        if tabIndex != activeSearchJobTabIndex:
+            #Deleting the main widget should clean up any connections we made to it and its sub-widgets
+            self.searchDialog.leftTabWidget_Results.widget(tabIndex).deleteLater()
+            self.searchDialog.leftTabWidget_Results.removeTab(tabIndex)
+
+    def closeDialog(self):
+        self.cancelSearchJob()
