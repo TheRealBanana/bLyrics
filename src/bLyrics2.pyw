@@ -38,10 +38,19 @@ class OUTMETHODS(object):
             self.parent.writeout("stderr", text)
 
 
+#If we had any other dialogs open, like the cache builder or the search window, we wouldn't actually close
+#This fixes that issue.
+class ClosableMainWindow(QtGui.QMainWindow):
+    def __init__(self, parent=None):
+        super(ClosableMainWindow, self).__init__(parent)
+
+    def closeEvent(self, closeEvent):
+        self.emit(QtCore.SIGNAL("MainWindowClose"))
+        closeEvent.accept()
 
 if __name__ == "__main__":
     app = QtGui.QApplication(sys.argv)
-    MainWindow = QtGui.QMainWindow()
+    MainWindow = ClosableMainWindow()
     ui = Ui_MainWindow(MainWindow)
     #Set up our standard out and error before setting up the UI
     outfuncs = OUTMETHODS(MainWindow, sys.stdout, sys.stderr)
@@ -54,7 +63,7 @@ if __name__ == "__main__":
     ui.setupUi()
 
     # Hook into the app's quiting sequence so it saves our settings before it quits
-    app.aboutToQuit.connect(ui.UiFunctions.saveSettings)
+    QtCore.QObject.connect(MainWindow, QtCore.SIGNAL("MainWindowClose"), ui.UiFunctions.quitApp)
 
     # Before we get going we get the user setting for _ALWAYS_ON_TOP
     _ALWAYS_ON_TOP_ = False
@@ -66,4 +75,4 @@ if __name__ == "__main__":
     if _ALWAYS_ON_TOP_:
         MainWindow.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
     MainWindow.show()
-    sys.exit(app.exec_())
+    app.exec_()

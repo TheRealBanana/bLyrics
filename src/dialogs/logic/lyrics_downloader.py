@@ -48,10 +48,13 @@ class threadedLyricsDownloader(QObject):
     def getUpdatedLyrics(self):
         #Check our cache, and download if missing
         for p in self.providers:
-            lyrics = p.getLyrics(self.song, self.artist)
-            if lyrics is not None:
-                self.last_return = [self.song, self.artist]
-                self.lyricsCache.saveLyrics(self.song, self.artist, lyrics)
-                return (lyrics, p.LYRICS_PROVIDER_NAME)
+            try:
+                lyrics = p.getLyrics(self.song, self.artist)
+                if lyrics is not None:
+                    self.last_return = [self.song, self.artist]
+                    self.lyricsCache.saveLyrics(self.song, self.artist, lyrics)
+                    return (lyrics, p.LYRICS_PROVIDER_NAME)
+            except:
+                continue
         providerlist = ", ".join([p.LYRICS_PROVIDER_NAME for p in self.providers])
         return ("Couldn't find lyrics for '%s' by %s. <br><br>Tried following lyrics providers: %s" % (self.song, self.artist, providerlist), None)

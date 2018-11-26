@@ -85,6 +85,7 @@ class Ui_lyricsSearchDialog(object):
         self.horizontalLayout.addWidget(self.leftFrame)
         self.resultLyricsView = QtGui.QTextEdit(lyricsSearchDialog)
         self.resultLyricsView.setAcceptRichText(True)
+        self.resultLyricsView.setReadOnly(True)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.MinimumExpanding, QtGui.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(4)
         sizePolicy.setVerticalStretch(0)

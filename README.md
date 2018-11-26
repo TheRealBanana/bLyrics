@@ -21,3 +21,4 @@ Screenshots:
 
 ![Tab 1 screenshot](http://i.imgur.com/HaOa3Xc.jpg)
 ![Tab 2 screenshot](https://i.imgur.com/o4ZRDKW.png)
+![Search Dialog screenshot](https://i.imgur.com/txDZGS3.png)

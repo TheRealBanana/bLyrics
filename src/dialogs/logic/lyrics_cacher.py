@@ -19,7 +19,8 @@ else:
 
 CACHEWRITEFOLDER = os.path.join(BASEPATH, ".lyricscache")
 
-BASE64TEMPLATE = "%(ARTIST)s___%(SONG)s"
+BASE64SEP = "___"
+BASE64TEMPLATE = "%(ARTIST)s"+BASE64SEP+"%(SONG)s"
 FILEEXTENSION = ".blyrics.txt"
 HTMLBREAKREGEX = re.compile("<br( /)?>", flags=re.I|re.M)
 

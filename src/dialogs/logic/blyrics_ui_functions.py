@@ -1,5 +1,6 @@
 import urllib2
 import json
+from ast import literal_eval
 import re
 from ..about_pane import *
 from ..options_dialog import *
@@ -14,6 +15,7 @@ from datetime import datetime as dTime
 from re import split as REsplit
 from re import sub as REsub
 from HTMLParser import HTMLParser
+from sys import exit as sys_exit
 
 
 #To force this program to always be on top of other windows change this to True
@@ -47,8 +49,18 @@ class foobarStatusDownloader(object):
                 return None
             rawjson = page.read()
             page.close()
-            data = json.loads(rawjson)
+            try:
+                data = json.loads(rawjson)
+            except ValueError:
+                #Was getting errors trying to load a 12k song playlist using json.loads()
+                #I am acutely aware of how stupid evaling is, but this is the only mitigation I can find right now.
+                #I will attempt to find a different workaround for this but for now we'll try and be as safe as we can.
+                #NOT A GOOD IDEA WHY DO THIS?!
+                data = literal_eval(rawjson)
+                if isinstance(data, dict) is False:
+                    return None
         except:
+            print "Big except"
             return None
         return data
 
@@ -103,8 +115,8 @@ class foobarStatusDownloader(object):
         #Encountered a problem with the ajquery template returning HTML escape sequences in song/artist names
         #Hopefully this fixes it
         h = HTMLParser()
-        return_data["song_name"] = h.unescape(current_song_name).encode("utf8")
-        return_data["artist_name"] = h.unescape(current_artist).encode("utf8")
+        return_data["song_name"] = unicode(h.unescape(current_song_name)).encode("utf8")
+        return_data["artist_name"] = unicode(h.unescape(current_artist)).encode("utf8")
         return_data["next_song_in_playlist"] = next_song_in_playlist
         return return_data
 
@@ -287,6 +299,10 @@ class UIFunctions(object):
         if self.lyricsDownloaderThread is not None:
             self.lyricsDownloaderThread.quit()
             self.lyricsDownloaderThread.wait(1000)
+
+    def quitApp(self):
+        self.saveSettings()
+        sys_exit(0)
 
     def testSettingGroup(self, groupName):
         #The reason we join() and then split() is because it's a quick way to convert a QStringList,
