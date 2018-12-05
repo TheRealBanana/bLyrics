@@ -93,13 +93,6 @@ def get_best_match(query, corpus, step=4, flex=3, case_sensitive=False, verbose=
                 bmv_r = rr
                 bp_r = p_r + f
 
-            if verbose:
-                print "\n" + str(f)
-                print "ll: -- value: %f -- snippet: %s" % (ll, corpus[p_l - f: p_r])
-                print "lr: -- value: %f -- snippet: %s" % (lr, corpus[p_l + f: p_r])
-                print "rl: -- value: %f -- snippet: %s" % (rl, corpus[p_l: p_r - f])
-                print "rr: -- value: %f -- snippet: %s" % (rl, corpus[p_l: p_r + f])
-
         return bp_l, bp_r, _match(query, corpus[bp_l : bp_r])
 
     if not case_sensitive:
@@ -107,10 +100,6 @@ def get_best_match(query, corpus, step=4, flex=3, case_sensitive=False, verbose=
         corpus = corpus.lower()
 
     qlen = len(query)
-
-    if flex >= qlen/2:
-        print "Warning: flex exceeds length of query / 2. Setting to default."
-        flex = 3
 
     match_values = scan_corpus(step)
     if len(match_values) == 0:
@@ -132,6 +121,8 @@ class searchJob(QtCore.QObject):
     def startSearch(self):
         idx = 0
         while self.quitting is False and idx < len(self.filelist):
+            self.emit(QtCore.SIGNAL("SearchCountUpdate"), idx)
+            QtGui.QApplication.processEvents()
             b64part = self.filelist[idx][:-len(FILEEXTENSION)]
             decoded = urlsafe_b64decode(b64part)
             artist, song = re.split(BASE64SEP, decoded)
@@ -183,9 +174,6 @@ class searchJob(QtCore.QObject):
                 hledstring = START_HIGHLIGHT + replstring + END_HIGHLIGHT
                 lyrics = re.sub(re.escape(replstring), hledstring, lyrics, flags=re.I)
 
-
-
-
             lyrics = re.sub("\n", "<br>", lyrics)
 
             #If we got this far we have a good match, lets add it to our page reference.
@@ -197,7 +185,6 @@ class searchJob(QtCore.QObject):
             listwidgetref = self.pagereference.findChild(QtGui.QListWidget, "resultsListWidget")
             listwidgetref.addItem(listentryitem)
 
-            QtGui.QApplication.processEvents()
             idx += 1
 
         self.emit(QtCore.SIGNAL("SearchFinished"))
@@ -210,11 +197,15 @@ class lyricsSearchFunctions(object):
         self.searchJobTask = None
         self.activeSearchJobWidget = None
         self.lyricsCacherRef = LyricsCacher()
+        self.cachesize = str(self.lyricsCacherRef.getCacheSize())
         self.setupConnections()
 
     def setupConnections(self):
         QtCore.QObject.connect(self.searchDialog.searchButton, QtCore.SIGNAL("clicked()"), self.searchButtonClicked)
         QtCore.QObject.connect(self.searchDialog.leftTabWidget_Results, QtCore.SIGNAL("tabCloseRequested(int)"), self.closeTab)
+
+    def searchCountUpdate(self, n):
+        self.searchDialog.searchButton.setText("Cancel Search  -  %s/%s" % (n, self.cachesize))
 
     def searchJobFinished(self):
         if self.searchThread is not None:
@@ -225,6 +216,7 @@ class lyricsSearchFunctions(object):
                 QtCore.QObject.disconnect(self.searchThread, QtCore.SIGNAL("started()"), self.searchJobTask.startSearch)
                 QtCore.QObject.disconnect(self.searchJobTask, QtCore.SIGNAL("workFinished()"), self.searchThread.quit)
                 QtCore.QObject.disconnect(self.searchJobTask, QtCore.SIGNAL("SearchFinished"), self.searchJobFinished)
+                QtCore.QObject.disconnect(self.searchJobTask, QtCore.SIGNAL("SearchCountUpdate"), self.searchCountUpdate)
         self.activeSearchJobWidget = None
         QtCore.QObject.disconnect(self.searchDialog.searchButton, QtCore.SIGNAL("clicked()"), self.searchJobFinished)
         QtCore.QObject.connect(self.searchDialog.searchButton, QtCore.SIGNAL("clicked()"), self.searchButtonClicked)
@@ -266,12 +258,13 @@ class lyricsSearchFunctions(object):
         QtCore.QObject.connect(self.searchThread, QtCore.SIGNAL("started()"), self.searchJobTask.startSearch)
         QtCore.QObject.connect(self.searchJobTask, QtCore.SIGNAL("workFinished()"), self.searchThread.quit)
         QtCore.QObject.connect(self.searchJobTask, QtCore.SIGNAL("SearchFinished"), self.searchJobFinished)
+        QtCore.QObject.connect(self.searchJobTask, QtCore.SIGNAL("SearchCountUpdate"), self.searchCountUpdate)
         self.searchThread.start()
         self.activeSearchJobWidget = pagereference
         #Swap our search button to a cancel button
         QtCore.QObject.disconnect(self.searchDialog.searchButton, QtCore.SIGNAL("clicked()"), self.searchButtonClicked)
         QtCore.QObject.connect(self.searchDialog.searchButton, QtCore.SIGNAL("clicked()"), self.searchJobFinished)
-        self.searchDialog.searchButton.setText("Cancel Search")
+        self.searchDialog.searchButton.setText("Cancel Search  -  0/%s" % self.cachesize)
         self.setInputEnabledState(False)
 
 
