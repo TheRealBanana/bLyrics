@@ -171,7 +171,6 @@ class searchJob(QtCore.QObject):
                 if self.searchparams["exactMatch_SearchString"] == 0:
                     good_match = get_best_match(searchedstring, lyrics)
                     if good_match[1] > MASTER_RATIO:
-                        print good_match
                         replstring = good_match[0]
                     else:
                         idx += 1
