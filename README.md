@@ -1,4 +1,4 @@
-# bLyrics 2.0
+# bLyrics2
 A small lyrics/control application for Foobar2000 written in Python using PyQt4 and the httpcontrol plugin for Foobar2000.
 
 Requirements (most recent versions):<br>

@@ -6,7 +6,7 @@ from ..about_pane import *
 from ..options_dialog import *
 from ..cachebuilder_progress_bar import Ui_cachebuilderProgressDialog
 from lyrics_search_functions import lyricsSearchFunctions
-from ..lyrics_search_dialog import Ui_lyricsSearchDialog, closableDialog
+from ..lyrics_search_dialog import Ui_lyricsSearchDialog
 from lyrics_downloader import threadedLyricsDownloader
 from lyrics_cacher import LyricsCacher
 from PyQt4 import QtCore, QtGui
@@ -35,6 +35,13 @@ except AttributeError:
     def _translate(context, text, disambig):
         return QtGui.QApplication.translate(context, text, disambig)
 
+class closableDialog(QtGui.QDialog):
+    def __init__(self, parent=None):
+        super(closableDialog, self).__init__(parent)
+    def closeEvent(self, QCloseEvent):
+        self.emit(QtCore.SIGNAL("SearchDialogClosing"))
+        QCloseEvent.accept()
+
 #Downloads the current song/artist/playmode from foobar's ajquery web interface
 class foobarStatusDownloader(object):
     def __init__(self, MWref, hostnameandport):
@@ -60,7 +67,6 @@ class foobarStatusDownloader(object):
                 if isinstance(data, dict) is False:
                     return None
         except:
-            print "Big except"
             return None
         return data
 
@@ -519,9 +525,13 @@ p, li { white-space: pre-wrap; }
         #Find out the current number of songs in the active playlist
         oldpagelength = self.fb2k.queryWebInterface()["playlistItemsPerPage"]
         #Hope the user doesn't have more than 16384 songs in a single playlist
-        bigdata =  self.fb2k.queryWebInterface(urlsuffix="/ajquery/?cmd=PlaylistItemsPerPage&param1=16384&param3=js/state.json")
-        #Switch back
-        self.fb2k.queryWebInterface(urlsuffix="/ajquery/?cmd=PlaylistItemsPerPage&param1=%s&param3=js/state.json" % oldpagelength, noreturn=True)
+        try:
+            bigdata = self.fb2k.queryWebInterface(urlsuffix="/ajquery/?cmd=PlaylistItemsPerPage&param1=16384&param3=js/state.json")
+        except:
+            return
+        #Switch back no matter what happens
+        finally:
+            self.fb2k.queryWebInterface(urlsuffix="/ajquery/?cmd=PlaylistItemsPerPage&param1=%s&param3=js/state.json" % oldpagelength, noreturn=True)
         totalsongs = len(bigdata["playlist"])
 
 

@@ -46,8 +46,8 @@
           <verstretch>2</verstretch>
          </sizepolicy>
         </property>
-        <layout class="QVBoxLayout" name="verticalLayout_2">
-         <item>
+        <layout class="QGridLayout" name="gridLayout">
+         <item row="0" column="0">
           <widget class="QLineEdit" name="songNameInput">
            <property name="frame">
             <bool>true</bool>
@@ -57,21 +57,48 @@
            </property>
           </widget>
          </item>
-         <item>
+         <item row="0" column="1">
+          <widget class="QCheckBox" name="exactMatchCheckbox_Song">
+           <property name="text">
+            <string>Exact Match</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0">
           <widget class="QLineEdit" name="artistNameInput">
            <property name="placeholderText">
             <string>Artist Name (or part of)</string>
            </property>
           </widget>
          </item>
-         <item>
+         <item row="1" column="1">
+          <widget class="QCheckBox" name="exactMatchCheckbox_Artist">
+           <property name="text">
+            <string>Exact Match</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="0">
           <widget class="QLineEdit" name="lyricsSearchStringInput">
            <property name="placeholderText">
             <string>Lyrics Search String</string>
            </property>
           </widget>
          </item>
-         <item>
+         <item row="2" column="1">
+          <widget class="QCheckBox" name="exactMatchCheckbox_SearchString">
+           <property name="text">
+            <string>Exact Match</string>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+           <property name="tristate">
+            <bool>false</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="0" colspan="2">
           <widget class="QPushButton" name="searchButton">
            <property name="text">
             <string>Search Lyrics Cache</string>
@@ -111,8 +138,11 @@
  </widget>
  <tabstops>
   <tabstop>songNameInput</tabstop>
+  <tabstop>exactMatchCheckbox_Song</tabstop>
   <tabstop>artistNameInput</tabstop>
+  <tabstop>exactMatchCheckbox_Artist</tabstop>
   <tabstop>lyricsSearchStringInput</tabstop>
+  <tabstop>exactMatchCheckbox_SearchString</tabstop>
   <tabstop>searchButton</tabstop>
   <tabstop>leftTabWidget_Results</tabstop>
   <tabstop>resultLyricsView</tabstop>
