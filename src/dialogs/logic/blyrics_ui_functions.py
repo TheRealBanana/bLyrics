@@ -4,7 +4,8 @@ from ast import literal_eval
 import re
 from ..about_pane import *
 from ..options_dialog import *
-from ..cachebuilder_progress_bar import Ui_cachebuilderProgressDialog
+from ..generic_progress_bar import Ui_genericProgressDialog
+from cachebuilder import CacheBuilder
 from lyrics_search_functions import lyricsSearchFunctions
 from ..lyrics_search_dialog import Ui_lyricsSearchDialog
 from lyrics_downloader import threadedLyricsDownloader
@@ -39,7 +40,7 @@ class closableDialog(QtGui.QDialog):
     def __init__(self, parent=None):
         super(closableDialog, self).__init__(parent)
     def closeEvent(self, QCloseEvent):
-        self.emit(QtCore.SIGNAL("SearchDialogClosing"))
+        self.emit(QtCore.SIGNAL("ClosableDialogClosing"))
         QCloseEvent.accept()
 
 #Downloads the current song/artist/playmode from foobar's ajquery web interface
@@ -139,9 +140,10 @@ class UIFunctions(object):
         self.actual_song = ""
         self.last_song = None
         self.lyricsCache = LyricsCacher()
+#        self.lyricsCache.preloadLyricsCacheIntoMemory()
         self.lyricsDownloader = None
         self.lyricsDownloaderThread = None
-        self.cachebuilderui = None
+        self.cacheBuilder = None
         self.address = ("127.0.0.1", 8888)
         self.fb2k = foobarStatusDownloader(UiReference.MainWindow, self.address)
         self.last_sb_message = None
@@ -526,13 +528,13 @@ p, li { white-space: pre-wrap; }
         oldpagelength = self.fb2k.queryWebInterface()["playlistItemsPerPage"]
         #Hope the user doesn't have more than 16384 songs in a single playlist
         try:
-            bigdata = self.fb2k.queryWebInterface(urlsuffix="/ajquery/?cmd=PlaylistItemsPerPage&param1=16384&param3=js/state.json")
+            songdata = self.fb2k.queryWebInterface(urlsuffix="/ajquery/?cmd=PlaylistItemsPerPage&param1=16384&param3=js/state.json")
         except:
             return
         #Switch back no matter what happens
         finally:
             self.fb2k.queryWebInterface(urlsuffix="/ajquery/?cmd=PlaylistItemsPerPage&param1=%s&param3=js/state.json" % oldpagelength, noreturn=True)
-        totalsongs = len(bigdata["playlist"])
+        totalsongs = len(songdata["playlist"])
 
 
         #This is going to take a whole lot of time so we are going to display a progress bar w/ a cancel button.
@@ -542,21 +544,31 @@ p, li { white-space: pre-wrap; }
         if self.areYouSureQuestion(title, message) == QtGui.QMessageBox.No: return
 
         widget = QtGui.QDialog(self.UI.MainWindow)
-        self.cachebuilderui = Ui_cachebuilderProgressDialog()
-        self.cachebuilderui.setupUi(widget, bigdata)
-        QtCore.QObject.connect(self.cachebuilderui.widget, QtCore.SIGNAL("cacheGenerationComplete"), self.cacheBuildReturn)
+        cachebuilderui = Ui_genericProgressDialog()
+        cachebuilderui.setupUi(widget)
+        QtCore.QObject.connect(widget, QtCore.SIGNAL("cacheGenerationComplete"), self.cacheBuildReturn)
        # widget.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
         widget.setWindowIcon(QtGui.QIcon(":/icon/bLyrics.ico"))
+        widget.setWindowTitle("Pre-Generating Cache Files...")
         #widget.setModal(True)
         widget.show()
-        self.cachebuilderui.startCacheGeneration()
+        if self.cacheBuilder is not None:
+            del self.cacheBuilder
+        self.cacheBuilder = CacheBuilder(songdata, cachebuilderui)
+        self.cacheBuilder.startCacheGeneration()
 
     def cacheBuildReturn(self):
         print "Done generating cache files."
         QtGui.QMessageBox.information(self.UI.MainWindow, "Cache Generation Complete", "Finished generating cache files. Check the console tab for for additional information.", QtGui.QMessageBox.Ok)
-        self.cachebuilderui.widget.close()
 
     def searchLyricsAction(self):
+        #Cant search if we dont have our cache loaded so check that first
+        if self.lyricsCache.loadedIntoMem is False:
+            self.loadLyricsCacheIntoMemory()
+            if self.lyricsCache.loadedIntoMem is False: #User canceled build
+                QtGui.QMessageBox.critical(self.UI.MainWindow, "Cache Load Canceled", "Cannot search lyrics without preloading lyrics into memory.", QtGui.QMessageBox.Ok)
+                return
+
         #Not sure if this is the right way to do it but I'm going with it for now
         if self.searchWidget is not None:
             self.searchWidget.deleteLater()
@@ -565,12 +577,24 @@ p, li { white-space: pre-wrap; }
         self.searchWidget = closableDialog()
         searchdialog = Ui_lyricsSearchDialog()
         searchdialog.setupUi(self.searchWidget)
-        self.searchfunctionsinstance = lyricsSearchFunctions(searchdialog)
+        self.searchfunctionsinstance = lyricsSearchFunctions(searchdialog, self.lyricsCache)
         if _ALWAYS_ON_TOP_:
             self.searchWidget.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
-        QtCore.QObject.connect(self.searchWidget, QtCore.SIGNAL("SearchDialogClosing"), self.searchfunctionsinstance.closeDialog)
+        QtCore.QObject.connect(self.searchWidget, QtCore.SIGNAL("ClosableDialogClosing"), self.searchfunctionsinstance.closeDialog)
         self.searchWidget.setWindowIcon(QtGui.QIcon(":/icon/bLyrics.ico"))
         self.searchWidget.setWindowTitle("Search Lyrics Cache")
         searchdialog.searchButton.setFocus()
         self.searchWidget.show()
+
+    def loadLyricsCacheIntoMemory(self):
+        #widget = QtGui.QDialog(self.UI.MainWindow)
+        widget = closableDialog(self.UI.MainWindow)
+        preloaderui = Ui_genericProgressDialog()
+        preloaderui.setupUi(widget)
+        QtCore.QObject.connect(widget, QtCore.SIGNAL("ClosableDialogClosing"), self.lyricsCache.cancelPreload)
+        widget.setWindowIcon(QtGui.QIcon(":/icon/bLyrics.ico"))
+        widget.setWindowTitle("Cache Preloading...")
+        widget.show()
+        self.lyricsCache.preloadLyricsCacheIntoMemory(preloaderui)
+        widget.close()
 

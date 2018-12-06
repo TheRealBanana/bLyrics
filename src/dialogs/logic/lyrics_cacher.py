@@ -2,7 +2,9 @@ import os
 import os.path
 import re
 import sys
-from base64 import urlsafe_b64encode#, urlsafe_b64decode
+from base64 import urlsafe_b64encode, urlsafe_b64decode
+from PyQt4.QtGui import QApplication
+from PyQt4.QtCore import SIGNAL, QObject
 
 #This folder is located two folder below the main src folder
 #src/dialogs/logic
@@ -27,9 +29,15 @@ HTMLBREAKREGEX = re.compile("<br( /)?>", flags=re.I|re.M)
 class LyricsCacher(object):
     def __init__(self):
         self.checkLyricsDir()
+        self.filelist = self.getLyricsFileList()
+        #Structure of cachedLyrics:
+        # cachedLyrics[artist_name][song_name]=lyrics
+        self.cachedLyrics = None
+        self.loadedIntoMem = False
+        self.cancel = False
 
     @staticmethod
-    def getCachefilePath(song, artist):
+    def getCachefileName(song, artist):
         return "%s%s" % (urlsafe_b64encode(BASE64TEMPLATE % {"SONG": song, "ARTIST": artist}), FILEEXTENSION)
 
     #Now sure if this is the best way to do this but It works without fiddling with return values/ifs
@@ -66,14 +74,13 @@ class LyricsCacher(object):
     #For now this is exact matching now. Later we may use the b64decode()'d string
     #with SequenceMatcher to check for almost matches. Not sure yet.
     def checkSong(self, song, artist):
-        files = self.getLyricsFileList()
-        if self.getCachefilePath(song, artist) in files:
+        if self.getCachefileName(song, artist) in self.filelist:
             return True
         else:
             return False
 
     def getLyrics(self, song, artist):
-        filepath = os.path.join(CACHEWRITEFOLDER, self.getCachefilePath(song, artist))
+        filepath = os.path.join(CACHEWRITEFOLDER, self.getCachefileName(song, artist))
         try:
             with open(filepath, 'r') as lyricsfile:
                 return lyricsfile.read().replace("\n", "<br>")
@@ -82,7 +89,7 @@ class LyricsCacher(object):
             print e
 
     def saveLyrics(self, song, artist, lyrics):
-        savepath = os.path.join(CACHEWRITEFOLDER, self.getCachefilePath(song, artist))
+        savepath = os.path.join(CACHEWRITEFOLDER, self.getCachefileName(song, artist))
         #Most of the returned lyrics are html with <br>'s instead of proper line-breaks
         if len(lyrics.splitlines()) > 1:
             #Looks like we have newlines already, remove any br's and hope it looks fine
@@ -90,7 +97,7 @@ class LyricsCacher(object):
         else:
             lyrics = HTMLBREAKREGEX.sub(os.linesep, lyrics)
         try:
-            lyrics = lyrics.encode("utf8")
+            lyrics = unicode(lyrics).encode("utf8")
         except: pass
         #Make sure our cache directory is there and ready to be written
         if self.checkLyricsDir():
@@ -99,6 +106,11 @@ class LyricsCacher(object):
                     lyricsfile.write(lyrics)
             except:
                 print "There was an error saving the lyrics for '%s' by %s to file" % (song, artist)
+        self.filelist.append(self.getCachefileName(song, artist))
+        if self.cachedLyrics is not None:
+            if not self.cachedLyrics.has_key(artist):
+                self.cachedLyrics.artist = {}
+            self.cachedLyrics[artist][song] = lyrics
 
     def getCacheSize(self):
         return len(self.getLyricsFileList())
@@ -110,9 +122,38 @@ class LyricsCacher(object):
             os.remove(os.path.join(CACHEWRITEFOLDER, f))
         return len(filelist)
 
-    #Search all cached lyrics for songs that contain the supplied strings
-    #The similarityFactor is a float value between 0 and 1 that describes how
-    #close a match the searched string must be.
-    #1.0 is exact match, 0.0 matches any string. 0.65 is a nice starting value.
-    def searchLyrics(self, strings=[], similarityFactor=1.0):
-        pass
+    def cancelPreload(self):
+        self.cancel = True
+
+    #Reading from the hdd is slow, even for an ssd. Might as well trade memory for speed.
+    def preloadLyricsCacheIntoMemory(self, progressbar_ui):
+        #Delete the old data
+        del self.cachedLyrics
+        self.cachedLyrics = {}
+        self.cancel = False
+        self.loadedIntoMem = False
+        filelist = self.getLyricsFileList()
+        totalsongs = len(filelist)
+        progressbar_ui.progressBar.setMaximum(totalsongs)
+        progressbar_ui.progressLabel.setText("Loading cache into memory...")
+        QObject.connect(progressbar_ui.cancelButton, SIGNAL("clicked()"), self.cancelPreload)
+        for idx, filename in enumerate(filelist):
+            if self.cancel is True:
+                print "Canceled loading cache into memory"
+                return
+
+            progressbar_ui.progressBar.setValue(idx)
+            QApplication.processEvents()
+
+            b64part = filename[:-len(FILEEXTENSION)]
+            decoded = urlsafe_b64decode(b64part)
+            artist, song = re.split(BASE64SEP, decoded)
+
+            if not self.cachedLyrics.has_key(artist):
+                self.cachedLyrics[artist] = {}
+            lyricsfilepath = os.path.join(CACHEWRITEFOLDER, filename)
+            with open(lyricsfilepath, 'r') as lyricsfile:
+                self.cachedLyrics[artist][song] = unicode(lyricsfile.read()).decode("utf8")
+
+        self.loadedIntoMem = True
+        print "Done loading cache into memory"

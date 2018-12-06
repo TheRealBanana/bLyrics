@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>cachebuilderProgressDialog</class>
- <widget class="QDialog" name="cachebuilderProgressDialog">
+ <class>genericProgressDialog</class>
+ <widget class="QDialog" name="genericProgressDialog">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -152,7 +152,7 @@
   <connection>
    <sender>cancelButton</sender>
    <signal>clicked()</signal>
-   <receiver>cachebuilderProgressDialog</receiver>
+   <receiver>genericProgressDialog</receiver>
    <slot>close()</slot>
    <hints>
     <hint type="sourcelabel">
