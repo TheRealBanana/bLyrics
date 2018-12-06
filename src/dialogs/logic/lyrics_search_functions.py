@@ -160,8 +160,6 @@ class searchJob(QtCore.QObject):
                 #If we got this far that means our song/artist must have either matched or werent included.
                 #We need to load the lyrics for this song. If we have a searchString in our search params will
                 #test for that now. If we don't, we just add this to the results.
-                type(self.cacheref.cachedLyrics[artist])
-                type(self.cacheref.cachedLyrics[artist][song])
                 lyrics = self.cacheref.cachedLyrics[artist][song]
                 #Match our substring, going with exact matches cause using our SequenceMatcher against every single word
                 #in the lyrics sounds like a very bad idea but we may investigate it later if required.

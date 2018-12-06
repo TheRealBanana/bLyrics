@@ -191,6 +191,7 @@ p, li { white-space: pre-wrap; }
      <string>Help</string>
     </property>
     <addaction name="aboutMenuItem"/>
+    <addaction name="actionPreloadLyricsCache"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuHelp"/>
@@ -225,6 +226,11 @@ p, li { white-space: pre-wrap; }
     <string>Options</string>
    </property>
   </action>
+  <action name="actionPreloadLyricsCache">
+   <property name="text">
+    <string>Load Lyrics Cache Into Memory</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>
@@ -243,7 +249,7 @@ p, li { white-space: pre-wrap; }
   <tabstop>consoleO_ClearButton</tabstop>
  </tabstops>
  <resources>
-  <include location="../icon/icon_resource.qrc"/>
+  <include location="../src/icon/icon_resource.qrc"/>
  </resources>
  <connections>
   <connection>
