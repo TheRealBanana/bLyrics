@@ -1,7 +1,8 @@
-from ..about_pane import *
-from ..options_dialog import *
+from ..about_pane import Ui_aboutWindow
+from ..options_dialog import Ui_OptionsDialog
 from ..generic_progress_bar import Ui_genericProgressDialog
 from ..lyrics_search_dialog import Ui_lyricsSearchDialog
+from options_dialog_functions import optionsDialogFunctions
 from cachebuilder import CacheBuilder
 from lyrics_search_functions import lyricsSearchFunctions
 from foobarhttpcontrol import foobarStatusDownloader
@@ -45,6 +46,7 @@ class UIFunctions(object):
     def __init__(self, UiReference):
         self.UI = UiReference
         self.optionsWindowui = Ui_OptionsDialog()
+        self.optionsWindowFunctionsInstance = None
         self.searchWidget = None
         self.searchfunctionsinstance = None
         self.windowTitle = None
@@ -63,8 +65,7 @@ class UIFunctions(object):
         #Set up the name of our app and the company name for saving settings later
         #We also tell it to save as an INI file in %APPDATA% (the default location)
         self.appSettings = QtCore.QSettings(QtCore.QSettings.IniFormat, QtCore.QSettings.UserScope, "Kylesplace.org", "bLyrics2")
-        #Need this to load options without excess code
-        self.optionsWindowui = Ui_OptionsDialog()
+        self.loadedOptions = {}
         self.webStatus_URL = ""
         #Some default settings for the appearance
         self.fontStyle = 'MS Shell Dlg 2, 8'
@@ -157,12 +158,17 @@ class UIFunctions(object):
 
     def openOptionsWindow(self):
         widget = QtGui.QDialog()
-        self.optionsWindowui.setupUi(widget, self, _ALWAYS_ON_TOP_)
+        self.optionsWindowui.setupUi(widget)
+        optionsfunctions = optionsDialogFunctions(widget, self)
+
         if _ALWAYS_ON_TOP_:
             widget.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
         widget.setWindowIcon(QtGui.QIcon(":/icon/bLyrics.ico"))
         widget.exec_()
-
+        #Refresh the UI with the updated options
+        self.refreshLyricsButtonAction()
+        #Not necessary.... probably
+        del optionsfunctions
 
     def openAboutWindow(self):
         #self.widget = QtGui.QWidget()
@@ -176,39 +182,25 @@ class UIFunctions(object):
             self.widget.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
         self.widget.exec_()
 
-    def saveSettings(self, optionsMenu=False, data=[]):
-        #This will just go ahead and save everything unless told not to
-        if optionsMenu is True:
-            #Ok we are receiving data from the options menu.
-            #The data list is a list of three dictionaries, each one holding
-            #settings from its respective page. Index 0 being the first page
-            #and so-on.
-            self.appSettings.beginGroup("Options")
-            for index in xrange(len(data)):
-                #Begin the appropriate group
-                if index == 0:
-                    self.appSettings.beginGroup("Appearance")
-                if index == 1:
-                    self.appSettings.beginGroup("fb2kServerInfo")
-                if index == 2:
-                    self.appSettings.beginGroup("Advanced")
-
-                #start stuffing data in
-                for key,val in data[index].iteritems():
-                    self.appSettings.setValue(key, val)
-
-                #End the group and get to the next one
-                self.appSettings.endGroup()
-
-            #Now that we're done iterating over the data we can sync it and finish
+    def saveSettings(self, data):
+        #Ok we are receiving data from the options menu.
+        #Data is in the same structure used in loadSettings()
+        self.appSettings.beginGroup("Options")
+        for subGroup in data:
+            self.appSettings.beginGroup(subGroup)
+            #start stuffing data in
+            for key,val in data[subGroup].iteritems():
+                self.appSettings.setValue(key, val)
+            #End the group and get to the next one
             self.appSettings.endGroup()
-            #Now we update the Ui
-            optionsdict = {}
-            optionsdict["Appearance"] = [data[0]["fontNameAndSize"], data[0]["bgFontColor"], data[0]["fgFontColor"]]
-            optionsdict["fb2kServerInfo"] = [data[1]["address"], data[1]["port"], data[1]["userpassreq"], data[1]["user"], data[1]["pass"]]
-            optionsdict["Advanced"] = [data[2]["debugModeEnabled"], data[2]["debugWriteEnabled"], data[2]["debugOutputFolder"], data[2]["masterMatchRatio"], data[2]["alwaysOnTop"]]
-            self.setupUiOptions(optionsdict)
 
+        #Now that we're done iterating over the data we can sync it and finish
+        self.appSettings.endGroup()
+        self.loadedOptions = data
+        #Now we update the Ui
+        self.setupUiOptions()
+
+    def saveWindowState(self):
         #Begin group for basic app settings
         self.appSettings.beginGroup("WindowState")
         #Screen size and position
@@ -222,94 +214,104 @@ class UIFunctions(object):
             self.lyricsDownloaderThread.wait(1000)
 
     def quitApp(self):
-        self.saveSettings()
+        self.saveWindowState()
         sys_exit(0)
 
     def testSettingGroup(self, groupName):
-        #The reason we join() and then split() is because it's a quick way to convert a QStringList,
-        #containing a bunch of QStrings, all into a single string at once without adding iteration.
-        for x in str(self.appSettings.allKeys().join(";")).split(";"): #Why join and resplit?
-            if groupName in x:
-                #We are sure the group exists so we can continue
+        if self.appSettings.childGroups().contains(groupName):
                 return True
+        else:
+            return False
 
-    def resetSettings(self):
-        self.appSettings.clear()
+    def loadSettings(self):
+        global _ALWAYS_ON_TOP_ #need to remove this in the future, global vars are not great
 
-    def loadSettings(self, optionsMenu=False, data={}):
-        global _ALWAYS_ON_TOP_
-        #data is a dictionary where the key is the subgroup and the value is a list containing the key(s) we are looking for
-        # Example: passing this:  data["LastAppState"] = ["windowPos"]
-        #          would return the saved window position
-        #If you want more than one key from a subgroup then just include it in the list
-        # Example: passing this:  data["LastAppState"] = ["windowSize", "windowsPos"]
-        #          would return both the saved size and the position.
+        #Start with a clean slate
+        self.loadedOptions = {}
 
-        #Options menu is asking for the user's saved settings
-        if optionsMenu is True:
+        #Check if we have any options, if not set up some defaults.
+        #We dont care about the window state since that will be set on close anyway.
+        if self.appSettings.childGroups().contains("Options") is False:
+            #Set up default options
+            self.loadedOptions = {
+                'Appearance':
+                    {'fgFontColor': '#000000', 'bgFontColor': '#FFFFFF', 'fontNameAndSize': 'Tahoma, 8'},
+                'Advanced':
+                    {'alwaysOnTop': False, 'debugModeEnabled': False, 'debugWriteEnabled': False, 'masterMatchRatio': '0.65', 'debugOutputFolder': '.'},
+                'fb2kServerInfo':
+                    {'userpassreq': False, 'user': '', 'pass': '', 'port': '8888', 'address': '127.0.0.1'}}
+        else:
+            #Retrieve all saved settings
             self.appSettings.beginGroup("Options")
-            returnData = {}
-            #loop through data{} and get the values requested. Each key is the subgroup name.
-            for key in data:
-                returnData[key] = []
-                self.appSettings.beginGroup(key)
-                #loop through the list of values to return and get the data
-                for value in data[key]:
-                    niceVal = str(self.appSettings.value(value).toPyObject())
-                    returnData[key].append(niceVal)
+
+            #Our settings are contained in a series of subgroups
+            for subGroup in self.appSettings.childGroups():
+                #Because we are going to be saving this for later use in normal python code
+                #we are going to convert all QStrings to python strings to be safe.
+                subGroup = str(subGroup)
+                self.appSettings.beginGroup(subGroup)
+                self.loadedOptions[subGroup] = {}
+
+                #And get our settings for this group
+                for key in self.appSettings.childKeys():
+                    #Again we dont want the QString
+                    key = str(key)
+                    value = self.appSettings.value(key)
+                    #Convert our QVariant into its appropriate data type
+                    if value.type() == QtCore.QMetaType.QString:
+                        value = str(value.toPyObject())
+                        #Fix true/false stuff
+                        if value == "true": value = True
+                        elif value == "false": value = False
+                    elif value.type() == QtCore.QMetaType.QStringList:
+                        value = str(value.toPyObject().join(";")).split(";")
+
+                    self.loadedOptions[subGroup][key] = value
                 self.appSettings.endGroup()
 
             self.appSettings.endGroup()
 
-            #We should have a nice dictionary with all the requested data in it so just return
-            return returnData
-
-        #We have a ton of settings to load and set so lets start with the basics
-        #Load up the window size and position if they exist
-        if self.testSettingGroup("WindowState") is True:
+        #Load last window position/size if we have it available
+        if self.appSettings.childGroups().contains("WindowState") is True:
             self.appSettings.beginGroup("WindowState")
             self.UI.MainWindow.resize(self.appSettings.value("windowSize").toSize())
             self.UI.MainWindow.move(self.appSettings.value("windowPos").toPoint())
             self.appSettings.endGroup()
-        #Now we load up our options if they exist, if not we create it and set the defaults.
-        if self.testSettingGroup("Options") is True:
-            #Load up the settings using the options window's loadOptions function
-            loadedOptions = self.optionsWindowui.loadOptions(external=True, MW=self)
-        else:
-            loadedOptions = {'Appearance': ['MS Shell Dlg 2, 8', '#FFFFFF', '#000000'], 'fb2kServerInfo': ['127.0.0.1', '8888', False, '', ''], 'Advanced': [False, False, '', '0.65', True]}
 
-        self.setupUiOptions(loadedOptions)
-        _ALWAYS_ON_TOP_ = loadedOptions["Advanced"][4]
+        _ALWAYS_ON_TOP_ = self.loadedOptions["Advanced"]["alwaysOnTop"]
+
+        #Finally apply our settings to the UI
+        self.setupUiOptions()
 
 
 
-    def setupUiOptions(self, options):
+    def setupUiOptions(self):
         #Set the templates installed
-        self.address = (options["fb2kServerInfo"][0], options["fb2kServerInfo"][1])
+        self.address = (self.loadedOptions["fb2kServerInfo"]["address"], self.loadedOptions["fb2kServerInfo"]["port"])
         self.webStatus_URL = "http://"
         #Set up the options we've been given
 
         #First we set the status page url with the given info.
         #Credentials
-        if options["fb2kServerInfo"][2] is True: self.webStatus_URL += "%s:%s@" % (options["fb2kServerInfo"][3], options["fb2kServerInfo"][4])
+        if self.loadedOptions["fb2kServerInfo"]["userpassreq"] is True: self.webStatus_URL += "%s:%s@" % (self.loadedOptions["fb2kServerInfo"]["user"], self.loadedOptions["fb2kServerInfo"]["pass"])
         #IP and port
-        self.webStatus_URL += "%s:%s/ajquery/index.html" % (options["fb2kServerInfo"][0], options["fb2kServerInfo"][1])
+        self.webStatus_URL += "%s:%s/ajquery/index.html" % (self.loadedOptions["fb2kServerInfo"]["address"], self.loadedOptions["fb2kServerInfo"]["port"])
 
         #Set the URL
         self.UI.MainStatusWebView.setUrl(QtCore.QUrl(_fromUtf8(self.webStatus_URL)))
 
         #Now we set the user-defined appearance settings.
-        self.fontStyle = options["Appearance"][0]
-        self.fontBgColor = options["Appearance"][1]
-        self.fontFgColor = options["Appearance"][2]
+        self.fontStyle = self.loadedOptions["Appearance"]["fontNameAndSize"]
+        self.fontBgColor = self.loadedOptions["Appearance"]["bgFontColor"]
+        self.fontFgColor = self.loadedOptions["Appearance"]["fgFontColor"]
 
         #Now on to the advanced page
         lwop = {}
         #Set the debug mode/write mode
-        lwop["debugModeEnabled"] = options["Advanced"][0]
-        lwop["debugWriteEnabled"] = options["Advanced"][1]
-        lwop["debugOutputFolder"] = options["Advanced"][2]
-        lwop["masterMatchRatio"] = options["Advanced"][3]
+        lwop["debugModeEnabled"] = self.loadedOptions["Advanced"]["debugModeEnabled"]
+        lwop["debugWriteEnabled"] = self.loadedOptions["Advanced"]["debugWriteEnabled"]
+        lwop["debugOutputFolder"] = self.loadedOptions["Advanced"]["debugOutputFolder"]
+        lwop["masterMatchRatio"] = self.loadedOptions["Advanced"]["masterMatchRatio"]
         self.masterMatchRatio = lwop["masterMatchRatio"]
 
     def clear_console(self):

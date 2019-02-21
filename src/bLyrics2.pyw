@@ -9,23 +9,21 @@ sys.setdefaultencoding('utf8')
 
 #Trying something new with the stdout,stderr so I can see it in both the cmdline and UI console.
 class OUTMETHODS(object):
-    def __init__(self, MainWindowRef, stdoutfunc, stderrfunc):
+    def __init__(self, MainWindowRef):
         self.console_out = True
-        self.cmd_out = True
+        self.cmd_out = False if "pythonw" in sys.executable else True
         self.MainWindowRef = MainWindowRef
         self.stdout = self.STDOUT(self)
         self.stderr = self.STDERR(self)
-        self.stdoutfunc = stdoutfunc
-        self.stderrfunc = stderrfunc
 
     def writeout(self, mode, text):
         if self.console_out:
             self.MainWindowRef.emit(QtCore.SIGNAL("consoleWrite"), text)
         if self.cmd_out:
             if mode == "stdout":
-                self.stdoutfunc.write(text)
+                sys.__stdout__.write(text)
             if mode == "stderr":
-                self.stderrfunc.write(text)
+                sys.__stderr__.write(text)
 
     class STDOUT(object):
         def __init__(self, parent): self.parent = parent
@@ -53,26 +51,20 @@ if __name__ == "__main__":
     MainWindow = ClosableMainWindow()
     ui = Ui_MainWindow(MainWindow)
     #Set up our standard out and error before setting up the UI
-    outfuncs = OUTMETHODS(MainWindow, sys.stdout, sys.stderr)
+    outfuncs = OUTMETHODS(MainWindow)
     QtCore.QObject.connect(MainWindow, QtCore.SIGNAL("consoleWrite"), ui.UiFunctions.write)
 
-    out = outfuncs.stdout
-    err = outfuncs.stderr
-    sys.stdout = out
-    sys.stderr = err
+    sys.stdout = outfuncs.stdout
+    sys.stderr = outfuncs.stderr
     ui.setupUi()
 
     # Hook into the app's quiting sequence so it saves our settings before it quits
     QtCore.QObject.connect(MainWindow, QtCore.SIGNAL("MainWindowClose"), ui.UiFunctions.quitApp)
 
     # Before we get going we get the user setting for _ALWAYS_ON_TOP
-    _ALWAYS_ON_TOP_ = False
-    if ui.UiFunctions.testSettingGroup("Options") is True:
-        rd = {"Advanced": ["alwaysOnTop"]}
-        if ui.UiFunctions.loadSettings(optionsMenu=True, data=rd)["Advanced"][0] == "true":
-            _ALWAYS_ON_TOP_ = True
+    ui.UiFunctions.loadSettings()
     # Set always-on-top if the user wants it
-    if _ALWAYS_ON_TOP_:
+    if ui.UiFunctions.loadedOptions["Advanced"]["alwaysOnTop"]:
         MainWindow.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
     MainWindow.show()
     app.exec_()
