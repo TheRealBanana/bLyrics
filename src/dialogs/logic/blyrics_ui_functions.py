@@ -44,7 +44,8 @@ class closableDialog(QtGui.QDialog):
 
 class UIFunctions(object):
     def __init__(self, UiReference):
-        self.UI = UiReference
+        self.mainUI = UiReference
+        self.MainWindow = self.mainUI.centralwidget.window()
         self.optionsWindowui = Ui_OptionsDialog()
         self.optionsWindowFunctionsInstance = None
         self.searchWidget = None
@@ -60,7 +61,7 @@ class UIFunctions(object):
         self.lyricsDownloaderThread = None
         self.cacheBuilder = None
         self.address = ("127.0.0.1", 8888)
-        self.fb2k = foobarStatusDownloader(UiReference.MainWindow, self.address)
+        self.fb2k = foobarStatusDownloader(self.MainWindow, self.address)
         self.last_sb_message = None
         #Set up the name of our app and the company name for saving settings later
         #We also tell it to save as an INI file in %APPDATA% (the default location)
@@ -79,6 +80,8 @@ class UIFunctions(object):
     #In terms of how this app functions, our main app loop is run by a QTimer defined in blyrics_ui.py.
     #This timer is executed every 5 seconds, ostensibly to check whether our song has changed or not but
     #its evolved to do quite a bit more over time. Hopefully I can cut out the cruft.
+    #TODO Remove ALL logic code from blyrics_ui.py - just like we've been doing
+    #TODO I want ALL UI code to be completely separated from ALL logic code when we're done
     def mainAppLoop(self):
 
         return_data = self.fb2k.getStatus()
@@ -204,8 +207,8 @@ class UIFunctions(object):
         #Begin group for basic app settings
         self.appSettings.beginGroup("WindowState")
         #Screen size and position
-        self.appSettings.setValue("windowSize", self.UI.MainWindow.size())
-        self.appSettings.setValue("windowPos", self.UI.MainWindow.pos())
+        self.appSettings.setValue("windowSize", self.MainWindow.size())
+        self.appSettings.setValue("windowPos", self.MainWindow.pos())
         self.appSettings.endGroup()
         self.appSettings.sync()
         #Not a great place to put this but while we're here....
@@ -274,8 +277,8 @@ class UIFunctions(object):
         #Load last window position/size if we have it available
         if self.appSettings.childGroups().contains("WindowState") is True:
             self.appSettings.beginGroup("WindowState")
-            self.UI.MainWindow.resize(self.appSettings.value("windowSize").toSize())
-            self.UI.MainWindow.move(self.appSettings.value("windowPos").toPoint())
+            self.MainWindow.resize(self.appSettings.value("windowSize").toSize())
+            self.MainWindow.move(self.appSettings.value("windowPos").toPoint())
             self.appSettings.endGroup()
 
         _ALWAYS_ON_TOP_ = self.loadedOptions["Advanced"]["alwaysOnTop"]
@@ -298,7 +301,7 @@ class UIFunctions(object):
         self.webStatus_URL += "%s:%s/ajquery/index.html" % (self.loadedOptions["fb2kServerInfo"]["address"], self.loadedOptions["fb2kServerInfo"]["port"])
 
         #Set the URL
-        self.UI.MainStatusWebView.setUrl(QtCore.QUrl(_fromUtf8(self.webStatus_URL)))
+        self.mainUI.MainStatusWebView.setUrl(QtCore.QUrl(_fromUtf8(self.webStatus_URL)))
 
         #Now we set the user-defined appearance settings.
         self.fontStyle = self.loadedOptions["Appearance"]["fontNameAndSize"]
@@ -321,7 +324,7 @@ p, li { white-space: pre-wrap; }
 </style></head><body style=" font-family:\'MS Shell Dlg 2\'; font-size:8.25pt; font-weight:400; font-style:normal;">
 <p style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"></p></body></html>
 '''
-        self.UI.consoleOutput.setHtml(_translate("MainWindow", html, None))
+        self.mainUI.consoleOutput.setHtml(_translate("MainWindow", html, None))
 
     def write(self, text):
         #This function allows us to set stderr and stdout to write to this function instead of the usual output.
@@ -333,11 +336,11 @@ p, li { white-space: pre-wrap; }
             #I hate it when I'm trying to read the output of someone program and it resets on a new output.
             #If the user is scrolled all the way down keep scrolling down, otherwise dont update
             #Need to get the console output vertical scrollbar reference
-            vscrollbar = self.UI.consoleOutput.verticalScrollBar()
+            vscrollbar = self.mainUI.consoleOutput.verticalScrollBar()
             scrollmax = vscrollbar.maximum()
             scrollval = vscrollbar.value()
             #Cursor infos incase we have a selection we want to preserve
-            cursor = self.UI.consoleOutput.textCursor()
+            cursor = self.mainUI.consoleOutput.textCursor()
             cursorstart = cursor.selectionStart()
             cursorend = cursor.selectionEnd()
 
@@ -349,18 +352,18 @@ p, li { white-space: pre-wrap; }
             if cursorstart != cursorend:
                 cursor.setPosition(cursorstart, QtGui.QTextCursor.MoveAnchor)
                 cursor.setPosition(cursorend, QtGui.QTextCursor.KeepAnchor)
-                self.UI.consoleOutput.setTextCursor(cursor)
+                self.mainUI.consoleOutput.setTextCursor(cursor)
 
             #close enough for government work!
             if scrollmax - scrollval < 5:
-                self.UI.consoleOutput.verticalScrollBar().setSliderPosition(self.UI.consoleOutput.verticalScrollBar().maximum())
+                self.mainUI.consoleOutput.verticalScrollBar().setSliderPosition(self.mainUI.consoleOutput.verticalScrollBar().maximum())
             elif scrollval != 0:
-                self.UI.consoleOutput.verticalScrollBar().setSliderPosition(scrollval)
+                self.mainUI.consoleOutput.verticalScrollBar().setSliderPosition(scrollval)
 
-            self.UI.consoleOutput.setFocus()
+            self.mainUI.consoleOutput.setFocus()
 
     def setWindowTitle(self, text):
-        self.UI.MainWindow.setWindowTitle(_translate("MainWindow", text, None))
+        self.MainWindow.setWindowTitle(_translate("MainWindow", text, None))
         self.windowTitle = text
 
     def setLyricsText(self, lyrics):
@@ -378,20 +381,20 @@ p, li { white-space: pre-wrap; }
 </style></head><body style="color: %s; background-color: %s; font-family:\'%s\'; font-size:%spt; font-weight:400; font-style:normal;">
 <p style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;">%s</p></body></html>
 ''' % (self.fontFgColor, self.fontBgColor, fontFamily, fontSize, lyrics)
-            self.UI.lyricsTextView.setHtml(_translate("MainWindow", html, None))
+            self.mainUI.lyricsTextView.setHtml(_translate("MainWindow", html, None))
 
     def setStatusbarText(self, text):
         if text is not None and len(text) > 0:
-            self.UI.Statusbar.setText(_translate("MainWindow", text, None))
+            self.mainUI.Statusbar.setText(_translate("MainWindow", text, None))
 
     def areYouSureQuestion(self, title, message):
-        return QtGui.QMessageBox.question(self.UI.MainWindow, title, message, QtGui.QMessageBox.Yes, QtGui.QMessageBox.No)
+        return QtGui.QMessageBox.question(self.MainWindow, title, message, QtGui.QMessageBox.Yes, QtGui.QMessageBox.No)
 
     def clearLyricsCacheAction(self):
         #U sure?
         if  self.areYouSureQuestion("Clear Lyrics Cache?", "<p align='center'>Are you sure you want to remove all %s cached lyrics?<br>(This cannot be undone)</p>" % self.lyricsCache.getCacheSize()) == QtGui.QMessageBox.Yes:
             numfiles = self.lyricsCache.clearLyricsCache()
-            QtGui.QMessageBox.information(self.UI.MainWindow, "Cached Cleared!", "Successfully cleared %s cached lyrics files!" % numfiles)
+            QtGui.QMessageBox.information(self.MainWindow, "Cached Cleared!", "Successfully cleared %s cached lyrics files!" % numfiles)
             print "Removed %d cached lyrics" % numfiles
 
     def refreshLyricsButtonAction(self):
@@ -399,20 +402,20 @@ p, li { white-space: pre-wrap; }
         self.mainAppLoop()
 
     def editLyricsButtonAction(self):
-        self.UI.lyricsTextView.setReadOnly(False)
-        self.UI.lyricsTextView.setFocus()
-        self.UI.lyricsTextView.selectAll()
+        self.mainUI.lyricsTextView.setReadOnly(False)
+        self.mainUI.lyricsTextView.setFocus()
+        self.mainUI.lyricsTextView.selectAll()
 
         #Repurpose our old refresh and edit buttons into save and cancel buttons
-        QtCore.QObject.disconnect(self.UI.RefreshLyricsButton, QtCore.SIGNAL(_fromUtf8("clicked()")), self.refreshLyricsButtonAction)
-        QtCore.QObject.disconnect(self.UI.editLyricsButton, QtCore.SIGNAL(_fromUtf8("clicked()")), self.editLyricsButtonAction)
-        self.UI.RefreshLyricsButton.setText("Save")
-        QtCore.QObject.connect(self.UI.RefreshLyricsButton, QtCore.SIGNAL(_fromUtf8("clicked()")), self.saveEditedLyrics)
-        self.UI.editLyricsButton.setText("Cancel")
-        QtCore.QObject.connect(self.UI.editLyricsButton, QtCore.SIGNAL(_fromUtf8("clicked()")), self.resetEditLyricsState)
+        QtCore.QObject.disconnect(self.mainUI.RefreshLyricsButton, QtCore.SIGNAL(_fromUtf8("clicked()")), self.refreshLyricsButtonAction)
+        QtCore.QObject.disconnect(self.mainUI.editLyricsButton, QtCore.SIGNAL(_fromUtf8("clicked()")), self.editLyricsButtonAction)
+        self.mainUI.RefreshLyricsButton.setText("Save")
+        QtCore.QObject.connect(self.mainUI.RefreshLyricsButton, QtCore.SIGNAL(_fromUtf8("clicked()")), self.saveEditedLyrics)
+        self.mainUI.editLyricsButton.setText("Cancel")
+        QtCore.QObject.connect(self.mainUI.editLyricsButton, QtCore.SIGNAL(_fromUtf8("clicked()")), self.resetEditLyricsState)
 
     def saveEditedLyrics(self):
-        newlyrics = unicode(self.UI.lyricsTextView.toPlainText())
+        newlyrics = unicode(self.mainUI.lyricsTextView.toPlainText())
         #If we get a blank page (i.e. no lyrics) we reacquire lyrics from online sources
         #If the user really wants to have no lyrics (blank page) they can put a space or line break.
         self.lyricsCache.saveLyrics(self.actual_song, self.actual_artist, newlyrics.encode("utf8"))
@@ -422,20 +425,20 @@ p, li { white-space: pre-wrap; }
 
     def resetEditLyricsState(self):
         #Undo everything done by editLyricsButtonAction()
-        if not self.UI.lyricsTextView.isReadOnly():
+        if not self.mainUI.lyricsTextView.isReadOnly():
             #Deselect any text and move cursor to the top
-            cursor = self.UI.lyricsTextView.textCursor()
+            cursor = self.mainUI.lyricsTextView.textCursor()
             cursor.clearSelection()
             cursor.movePosition(QtGui.QTextCursor.Start)
-            self.UI.lyricsTextView.setTextCursor(cursor)
-            self.UI.lyricsTextView.setReadOnly(True)
+            self.mainUI.lyricsTextView.setTextCursor(cursor)
+            self.mainUI.lyricsTextView.setReadOnly(True)
             #Repurpose our old refresh and edit buttons into save and cancel buttons
-            QtCore.QObject.disconnect(self.UI.RefreshLyricsButton, QtCore.SIGNAL(_fromUtf8("clicked()")), self.saveEditedLyrics)
-            QtCore.QObject.disconnect(self.UI.editLyricsButton, QtCore.SIGNAL(_fromUtf8("clicked()")), self.resetEditLyricsState)
-            self.UI.RefreshLyricsButton.setText("Refresh")
-            QtCore.QObject.connect(self.UI.RefreshLyricsButton, QtCore.SIGNAL(_fromUtf8("clicked()")), self.refreshLyricsButtonAction)
-            self.UI.editLyricsButton.setText("Edit")
-            QtCore.QObject.connect(self.UI.editLyricsButton, QtCore.SIGNAL(_fromUtf8("clicked()")), self.editLyricsButtonAction)
+            QtCore.QObject.disconnect(self.mainUI.RefreshLyricsButton, QtCore.SIGNAL(_fromUtf8("clicked()")), self.saveEditedLyrics)
+            QtCore.QObject.disconnect(self.mainUI.editLyricsButton, QtCore.SIGNAL(_fromUtf8("clicked()")), self.resetEditLyricsState)
+            self.mainUI.RefreshLyricsButton.setText("Refresh")
+            QtCore.QObject.connect(self.mainUI.RefreshLyricsButton, QtCore.SIGNAL(_fromUtf8("clicked()")), self.refreshLyricsButtonAction)
+            self.mainUI.editLyricsButton.setText("Edit")
+            QtCore.QObject.connect(self.mainUI.editLyricsButton, QtCore.SIGNAL(_fromUtf8("clicked()")), self.editLyricsButtonAction)
             self.refreshLyricsButtonAction()
 
     def pregenLyricsCache(self):
@@ -458,7 +461,7 @@ p, li { white-space: pre-wrap; }
         message = "<p align='center'>Are you sure you want to download lyrics for all %s songs in the current playlist?<br><br>(This will take a while but can be canceled)</p>" % totalsongs
         if self.areYouSureQuestion(title, message) == QtGui.QMessageBox.No: return
 
-        widget = QtGui.QDialog(self.UI.MainWindow)
+        widget = QtGui.QDialog(self.MainWindow)
         cachebuilderui = Ui_genericProgressDialog()
         cachebuilderui.setupUi(widget)
         QtCore.QObject.connect(widget, QtCore.SIGNAL("cacheGenerationComplete"), self.cacheBuildReturn)
@@ -474,14 +477,14 @@ p, li { white-space: pre-wrap; }
 
     def cacheBuildReturn(self):
         print "Done generating cache files."
-        QtGui.QMessageBox.information(self.UI.MainWindow, "Cache Generation Complete", "Finished generating cache files. Check the console tab for for additional information.", QtGui.QMessageBox.Ok)
+        QtGui.QMessageBox.information(self.MainWindow, "Cache Generation Complete", "Finished generating cache files. Check the console tab for for additional information.", QtGui.QMessageBox.Ok)
 
     def searchLyricsAction(self):
         #Cant search if we dont have our cache loaded so check that first
         if self.lyricsCache.loadedIntoMem is False:
             self.loadLyricsCacheIntoMemory()
             if self.lyricsCache.loadedIntoMem is False: #User canceled build
-                QtGui.QMessageBox.critical(self.UI.MainWindow, "Cache Load Canceled", "Cannot search lyrics without preloading lyrics into memory.", QtGui.QMessageBox.Ok)
+                QtGui.QMessageBox.critical(self.MainWindow, "Cache Load Canceled", "Cannot search lyrics without preloading lyrics into memory.", QtGui.QMessageBox.Ok)
                 return
 
         #Not sure if this is the right way to do it but I'm going with it for now
@@ -502,8 +505,8 @@ p, li { white-space: pre-wrap; }
         self.searchWidget.show()
 
     def loadLyricsCacheIntoMemory(self):
-        #widget = QtGui.QDialog(self.UI.MainWindow)
-        widget = closableDialog(self.UI.MainWindow)
+        #widget = QtGui.QDialog(self.MainWindow)
+        widget = closableDialog(self.MainWindow)
         preloaderui = Ui_genericProgressDialog()
         preloaderui.setupUi(widget)
         QtCore.QObject.connect(widget, QtCore.SIGNAL("ClosableDialogClosing"), self.lyricsCache.cancelPreload)
@@ -513,3 +516,42 @@ p, li { white-space: pre-wrap; }
         self.lyricsCache.preloadLyricsCacheIntoMemory(preloaderui)
         widget.close()
 
+    def appInit(self):
+        #Stuff we need to do when the app first launches
+        self.setupConnections()
+        self.loadSettings()
+
+        #Clear out some of the placeholder text
+        self.mainUI.consoleOutput.clear()
+        self.mainUI.lyricsTextView.clear()
+
+
+        #Tell the user we're not connected
+        self.setLyricsText("Not connected to Foobar2000's Web server, press check your settings and make sure Foobar is running.")
+        self.setWindowTitle("bLyrics  ::  Not Connected - Press Refresh or Connect")
+        self.setStatusbarText("Foobar2000 Web Interface Not Found")
+        self.write("bLyrics Started")
+
+        #Set up the internal loop that checks for a new song and retrieves lyrics when needed.
+        if self.timer is None:
+            self.timer = QtCore.QTimer()
+            QtCore.QObject.connect(self.timer, QtCore.SIGNAL("timeout()"), self.mainAppLoop)
+        self.timer.start(5000)
+        #And now we just manually execute the check_song_loop ourselves the first time instead of waiting 5s for the first iteration of the timer to finish.
+        self.mainAppLoop()
+
+    def setupConnections(self):
+        mainWindow = self.mainUI.centralwidget.window()
+        QtCore.QObject.connect(self.mainUI.RefreshLyricsButton, QtCore.SIGNAL("clicked()"), self.refreshLyricsButtonAction)
+        QtCore.QObject.connect(self.mainUI.actionSearchLyrics, QtCore.SIGNAL("triggered()"), self.searchLyricsAction)
+        QtCore.QObject.connect(self.mainUI.editLyricsButton, QtCore.SIGNAL("clicked()"), self.editLyricsButtonAction)
+        QtCore.QObject.connect(self.mainUI.tabWidget, QtCore.SIGNAL(_fromUtf8("currentChanged(int)")), self.mainUI.MainStatusWebView.reload)
+        QtCore.QObject.connect(self.mainUI.aboutMenuItem, QtCore.SIGNAL(_fromUtf8("triggered()")), self.openAboutWindow)
+        QtCore.QObject.connect(self.mainUI.actionQuit, QtCore.SIGNAL(_fromUtf8("triggered()")), mainWindow.close)
+        QtCore.QObject.connect(self.mainUI.actionRefresh, QtCore.SIGNAL(_fromUtf8("triggered()")), self.mainAppLoop)
+        QtCore.QObject.connect(self.mainUI.actionOptions, QtCore.SIGNAL(_fromUtf8("triggered()")), self.openOptionsWindow)
+        QtCore.QObject.connect(self.mainUI.actionClearLyricsCache, QtCore.SIGNAL(_fromUtf8("triggered()")), self.clearLyricsCacheAction)
+        QtCore.QObject.connect(self.mainUI.actionPregenLyricsCache, QtCore.SIGNAL(_fromUtf8("triggered()")), self.pregenLyricsCache)
+        QtCore.QObject.connect(self.mainUI.consoleO_ClearButton, QtCore.SIGNAL(_fromUtf8("clicked()")), self.clear_console)
+        QtCore.QObject.connect(self.mainUI.actionPreloadLyricsCache, QtCore.SIGNAL(_fromUtf8("triggered()")), self.loadLyricsCacheIntoMemory)
+        QtCore.QMetaObject.connectSlotsByName(mainWindow)

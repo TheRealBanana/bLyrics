@@ -1,4 +1,5 @@
-from dialogs.blyrics_ui import *
+from dialogs.blyrics_ui import Ui_MainWindow
+from dialogs.logic.blyrics_ui_functions import UIFunctions
 from PyQt4 import QtGui, QtCore
 import sys
 
@@ -49,22 +50,25 @@ class ClosableMainWindow(QtGui.QMainWindow):
 if __name__ == "__main__":
     app = QtGui.QApplication(sys.argv)
     MainWindow = ClosableMainWindow()
-    ui = Ui_MainWindow(MainWindow)
+    ui = Ui_MainWindow()
+    ui.setupUi(MainWindow)
+    uifuncts = UIFunctions(ui)
+
     #Set up our standard out and error before setting up the UI
     outfuncs = OUTMETHODS(MainWindow)
-    QtCore.QObject.connect(MainWindow, QtCore.SIGNAL("consoleWrite"), ui.UiFunctions.write)
+    QtCore.QObject.connect(MainWindow, QtCore.SIGNAL("consoleWrite"), uifuncts.write)
 
     sys.stdout = outfuncs.stdout
     sys.stderr = outfuncs.stderr
-    ui.setupUi()
+
 
     # Hook into the app's quiting sequence so it saves our settings before it quits
-    QtCore.QObject.connect(MainWindow, QtCore.SIGNAL("MainWindowClose"), ui.UiFunctions.quitApp)
+    QtCore.QObject.connect(MainWindow, QtCore.SIGNAL("MainWindowClose"), uifuncts.quitApp)
 
-    # Before we get going we get the user setting for _ALWAYS_ON_TOP
-    ui.UiFunctions.loadSettings()
+    #Now that we have the Ui set up, lets finish the initiation process
+    uifuncts.appInit()
     # Set always-on-top if the user wants it
-    if ui.UiFunctions.loadedOptions["Advanced"]["alwaysOnTop"]:
+    if uifuncts.loadedOptions["Advanced"]["alwaysOnTop"]:
         MainWindow.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
     MainWindow.show()
     app.exec_()
