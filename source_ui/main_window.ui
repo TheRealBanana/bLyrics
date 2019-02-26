@@ -19,6 +19,10 @@
   <property name="windowTitle">
    <string>bLyrics</string>
   </property>
+  <property name="windowIcon">
+   <iconset resource="../src/icon/icon_resource.qrc">
+    <normaloff>:/icon/bLyrics.ico</normaloff>:/icon/bLyrics.ico</iconset>
+  </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout">
     <item row="0" column="0">
@@ -27,7 +31,7 @@
        <enum>Qt::NoContextMenu</enum>
       </property>
       <property name="currentIndex">
-       <number>0</number>
+       <number>1</number>
       </property>
       <widget class="QWidget" name="MainTab">
        <attribute name="title">
@@ -57,7 +61,7 @@
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
 &lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'MS Shell Dlg 2'; font-size:8.25pt; font-weight:400; font-style:normal;&quot;&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:8pt;&quot;&gt;asdf&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:8pt;&quot;&gt;_LYRICS_DISPLAY_&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
          </widget>
         </item>
@@ -113,7 +117,7 @@ p, li { white-space: pre-wrap; }
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
 &lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'MS Shell Dlg 2'; font-size:8.25pt; font-weight:400; font-style:normal;&quot;&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:8pt;&quot;&gt;REDIRECT_STDOUT_HERE&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:8pt;&quot;&gt;_STDOUT_STRERR_OUTPUT_&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
          </widget>
         </item>
@@ -137,7 +141,7 @@ p, li { white-space: pre-wrap; }
     <item row="2" column="0">
      <widget class="QLabel" name="Statusbar">
       <property name="text">
-       <string>&lt;p style=&quot;color: blue;&quot;&gt;STATUSBAR WITH BENEFITS...... CSS BENEFITS!&lt;/p&gt;</string>
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; color:#0000ff;&quot;&gt;_CSS_STATUS_BAR_&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
       </property>
       <property name="textFormat">
        <enum>Qt::AutoText</enum>
@@ -178,11 +182,13 @@ p, li { white-space: pre-wrap; }
     <property name="title">
      <string>File</string>
     </property>
-    <addaction name="actionReconnect"/>
-    <addaction name="actionDisconnect"/>
+    <addaction name="actionRefresh"/>
     <addaction name="separator"/>
-    <addaction name="actionClearCache"/>
     <addaction name="actionOptions"/>
+    <addaction name="separator"/>
+    <addaction name="actionSearchLyrics"/>
+    <addaction name="actionClearLyricsCache"/>
+    <addaction name="actionPregenLyricsCache"/>
     <addaction name="separator"/>
     <addaction name="actionQuit"/>
    </widget>
@@ -206,21 +212,6 @@ p, li { white-space: pre-wrap; }
     <string>Quit</string>
    </property>
   </action>
-  <action name="actionDisconnect">
-   <property name="text">
-    <string>Disconnect</string>
-   </property>
-  </action>
-  <action name="actionReconnect">
-   <property name="text">
-    <string>Reconnect</string>
-   </property>
-  </action>
-  <action name="actionClearCache">
-   <property name="text">
-    <string>Clear playlist cache</string>
-   </property>
-  </action>
   <action name="actionOptions">
    <property name="text">
     <string>Options</string>
@@ -229,6 +220,26 @@ p, li { white-space: pre-wrap; }
   <action name="actionPreloadLyricsCache">
    <property name="text">
     <string>Load Lyrics Cache Into Memory</string>
+   </property>
+  </action>
+  <action name="actionRefresh">
+   <property name="text">
+    <string>Refresh Lyrics</string>
+   </property>
+  </action>
+  <action name="actionSearchLyrics">
+   <property name="text">
+    <string>Search Lyrics Cache</string>
+   </property>
+  </action>
+  <action name="actionClearLyricsCache">
+   <property name="text">
+    <string>Clear Lyrics Cache</string>
+   </property>
+  </action>
+  <action name="actionPregenLyricsCache">
+   <property name="text">
+    <string>Generate Lyrics Cache</string>
    </property>
   </action>
  </widget>
@@ -251,86 +262,5 @@ p, li { white-space: pre-wrap; }
  <resources>
   <include location="../src/icon/icon_resource.qrc"/>
  </resources>
- <connections>
-  <connection>
-   <sender>RefreshLyricsButton</sender>
-   <signal>clicked()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>close()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>79</x>
-     <y>599</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>279</x>
-     <y>336</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>tabWidget</sender>
-   <signal>currentChanged(int)</signal>
-   <receiver>MainStatusWebView</receiver>
-   <slot>reload()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>274</x>
-     <y>325</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>273</x>
-     <y>334</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionQuit</sender>
-   <signal>triggered()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>close()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>329</x>
-     <y>324</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>consoleO_ClearButton</sender>
-   <signal>clicked()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>close()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>57</x>
-     <y>596</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>274</x>
-     <y>324</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>editLyricsButton</sender>
-   <signal>clicked()</signal>
-   <receiver>lyricsTextView</receiver>
-   <slot>close()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>148</x>
-     <y>587</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>297</x>
-     <y>405</y>
-    </hint>
-   </hints>
-  </connection>
- </connections>
+ <connections/>
 </ui>
