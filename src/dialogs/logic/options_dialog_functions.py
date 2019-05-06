@@ -19,10 +19,10 @@ except AttributeError:
         return QtGui.QApplication.translate(context, text, disambig)
 
 class optionsDialogFunctions(object):
-    def __init__(self, widget, MainWindow):
-        self.MainWindow = MainWindow
-        self.OptionsDialog = MainWindow.optionsWindowui
-        self.settings = MainWindow.loadedOptions
+    def __init__(self, widget, uiFunctionsReference):
+        self.uiFunctionsReference = uiFunctionsReference
+        self.OptionsDialog = uiFunctionsReference.optionsWindowui
+        self.settings = uiFunctionsReference.loadedOptions
         self.AOT = self.settings["Advanced"]["alwaysOnTop"]
         self.widget = widget
         self.curDir = getcwd()
@@ -118,8 +118,8 @@ class optionsDialogFunctions(object):
         data["Advanced"]["masterMatchRatio"] = str(self.OptionsDialog.MRSelector.value())
         data["Advanced"]["alwaysOnTop"] = self.OptionsDialog.alwaysOnTopCheck.isChecked()
 
-        self.MainWindow.saveSettings(data)
-        self.MainWindow.appSettings.sync()
+        self.uiFunctionsReference.saveSettings(data)
+        self.uiFunctionsReference.appSettings.sync()
         self.widget.accept()
 
     def applyOptionsToUi(self):

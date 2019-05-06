@@ -33,10 +33,10 @@ def enumerateProviders():
 
 
 class threadedLyricsDownloader(QObject):
-    def __init__(self, song, artist):
+    def __init__(self, song, artist, lyricsCacheRef):
         self.song = song
         self.artist = artist
-        self.lyricsCache = LyricsCacher()
+        self.lyricsCache = lyricsCacheRef
         self.providers = [p.LyricsProvider() for p in enumerateProviders()]
         super(threadedLyricsDownloader, self).__init__()
 

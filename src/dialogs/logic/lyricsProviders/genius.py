@@ -40,7 +40,7 @@ class LyricsProvider(object):
 
     def getLyrics(self, song, artist):
         final_lyrics = None
-        surl = "https://genius.com/api/search/song?page=1&q=%s"
+        surl = "https://genius.com/api/search/multi?page=1&q=%s"
         query_data = urllib.quote_plus(song + " " + artist)
         queryurl = surl % query_data
 

@@ -74,12 +74,21 @@ class LyricsCacher(object):
     #For now this is exact matching now. Later we may use the b64decode()'d string
     #with SequenceMatcher to check for almost matches. Not sure yet.
     def checkSong(self, song, artist):
-        if self.getCachefileName(song, artist) in self.filelist:
+        if self.loadedIntoMem:
+          if self.cachedLyrics.has_key(artist) and self.cachedLyrics[artist].has_key(song):
+              return True
+          else:
+              return False
+        elif self.getCachefileName(song, artist) in self.filelist:
             return True
         else:
             return False
 
     def getLyrics(self, song, artist):
+        if self.loadedIntoMem:
+            if self.cachedLyrics.has_key(artist) and self.cachedLyrics[artist].has_key(song):
+                return self.cachedLyrics[artist][song]
+        #Try to load from disk if we arent loaded into mem or the memory cache missed.
         filepath = os.path.join(CACHEWRITEFOLDER, self.getCachefileName(song, artist))
         try:
             with open(filepath, 'r') as lyricsfile:
@@ -89,6 +98,7 @@ class LyricsCacher(object):
             print e
 
     def saveLyrics(self, song, artist, lyrics):
+        print "saving lyrics for %s by %s: %s" % (song, artist, len(lyrics))
         savepath = os.path.join(CACHEWRITEFOLDER, self.getCachefileName(song, artist))
         #Most of the returned lyrics are html with <br>'s instead of proper line-breaks
         if len(lyrics.splitlines()) > 1:

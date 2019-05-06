@@ -47,7 +47,6 @@ class UIFunctions(object):
         self.mainUI = UiReference
         self.MainWindow = self.mainUI.centralwidget.window()
         self.optionsWindowui = Ui_OptionsDialog()
-        self.optionsWindowFunctionsInstance = None
         self.searchWidget = None
         self.searchfunctionsinstance = None
         self.windowTitle = None
@@ -136,7 +135,7 @@ class UIFunctions(object):
             QtCore.QObject.disconnect(self.lyricsDownloaderThread, QtCore.SIGNAL("started()"), self.lyricsWorkTask.doWork)
 
         self.lyricsDownloaderThread = QtCore.QThread()
-        self.lyricsWorkTask = threadedLyricsDownloader(song, artist)
+        self.lyricsWorkTask = threadedLyricsDownloader(song, artist, self.lyricsCache)
         self.lyricsWorkTask.moveToThread(self.lyricsDownloaderThread)
 
         QtCore.QObject.connect(self.lyricsDownloaderThread, QtCore.SIGNAL("started()"), self.lyricsWorkTask.doWork)
@@ -333,7 +332,7 @@ p, li { white-space: pre-wrap; }
             timestamp = dTime.fromtimestamp(tTime()).strftime('%d/%b/%Y-%I:%M:%S %p:   ')
             text = timestamp + text + "\n"
             #Set our cursor to the bottom of the console so we scroll with the output, but only if we are already scrolled to the bottom
-            #I hate it when I'm trying to read the output of someone program and it resets on a new output.
+            #I hate it when I'm trying to read the output of some program and it resets on a new output.
             #If the user is scrolled all the way down keep scrolling down, otherwise dont update
             #Need to get the console output vertical scrollbar reference
             vscrollbar = self.mainUI.consoleOutput.verticalScrollBar()
@@ -432,7 +431,6 @@ p, li { white-space: pre-wrap; }
             cursor.movePosition(QtGui.QTextCursor.Start)
             self.mainUI.lyricsTextView.setTextCursor(cursor)
             self.mainUI.lyricsTextView.setReadOnly(True)
-            #Repurpose our old refresh and edit buttons into save and cancel buttons
             QtCore.QObject.disconnect(self.mainUI.RefreshLyricsButton, QtCore.SIGNAL(_fromUtf8("clicked()")), self.saveEditedLyrics)
             QtCore.QObject.disconnect(self.mainUI.editLyricsButton, QtCore.SIGNAL(_fromUtf8("clicked()")), self.resetEditLyricsState)
             self.mainUI.RefreshLyricsButton.setText("Refresh")
@@ -505,7 +503,6 @@ p, li { white-space: pre-wrap; }
         self.searchWidget.show()
 
     def loadLyricsCacheIntoMemory(self):
-        #widget = QtGui.QDialog(self.MainWindow)
         widget = closableDialog(self.MainWindow)
         preloaderui = Ui_genericProgressDialog()
         preloaderui.setupUi(widget)
