@@ -87,7 +87,7 @@ class LyricsCacher(object):
     def getLyrics(self, song, artist):
         if self.loadedIntoMem:
             if self.cachedLyrics.has_key(artist) and self.cachedLyrics[artist].has_key(song):
-                return self.cachedLyrics[artist][song]
+                return self.cachedLyrics[artist][song].replace("\n", "<br>")
         #Try to load from disk if we arent loaded into mem or the memory cache missed.
         filepath = os.path.join(CACHEWRITEFOLDER, self.getCachefileName(song, artist))
         try:
