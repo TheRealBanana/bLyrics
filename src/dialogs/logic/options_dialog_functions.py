@@ -3,6 +3,7 @@ from os import getcwd
 import win32gui, win32con
 from re import split as REsplit
 from functools import partial
+from ..fake_cell_widget import Ui_fakeCellWidget
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -17,6 +18,8 @@ try:
 except AttributeError:
     def _translate(context, text, disambig):
         return QtGui.QApplication.translate(context, text, disambig)
+
+
 
 class optionsDialogFunctions(object):
     def __init__(self, widget, uiFunctionsReference):
@@ -49,7 +52,6 @@ class optionsDialogFunctions(object):
         QtCore.QMetaObject.connectSlotsByName(self.widget)
 
         self.OptionsDialog = self.OptionsDialog
-
     def uncheckDbgWrite(self, _):
         if self.OptionsDialog.debugWriteCheck.isChecked():
             self.OptionsDialog.debugWriteCheck.setChecked(0)
@@ -87,6 +89,7 @@ class optionsDialogFunctions(object):
         self.setDir = self.curDir
         self.OptionsDialog.MRSelector.setProperty("value", 0.65)
         self.OptionsDialog.alwaysOnTopCheck.setChecked(0)
+        #TODO ADD RESET FOR ROWS IN QLISTWIDGET
 
 
     def saveOptions(self):
@@ -118,9 +121,15 @@ class optionsDialogFunctions(object):
         data["Advanced"]["masterMatchRatio"] = str(self.OptionsDialog.MRSelector.value())
         data["Advanced"]["alwaysOnTop"] = self.OptionsDialog.alwaysOnTopCheck.isChecked()
 
+        data["lyricsSource"]["lyricsSourceList"] = self.getLyricsSourceList()
+
         self.uiFunctionsReference.saveSettings(data)
         self.uiFunctionsReference.appSettings.sync()
         self.widget.accept()
+
+    def getLyricsSourceList(self):
+        pass
+        #Will just store the proper data in the UserData role for the row
 
     def applyOptionsToUi(self):
         #And now we set up the options UI with the correct options
@@ -155,6 +164,27 @@ class optionsDialogFunctions(object):
         self.setDir = self.settings["Advanced"]["debugOutputFolder"]
         self.OptionsDialog.MRSelector.setValue(float(self.settings["Advanced"]["masterMatchRatio"]))
         self.OptionsDialog.alwaysOnTopCheck.setChecked(self.settings["Advanced"]["alwaysOnTop"])
+
+        #Page Four - Lyrics Sources
+        # Data format:
+        # dict[filename] = [propername, version, enableddisabled]
+        for source in self.settings["lyricsSource"]:
+            rowItem = QtGui.QListWidgetItem(self.OptionsDialog.lyricsSourceWidget)
+            #rowData[0] = Lyrics provider name
+            #rowData[1] = provider version
+            #rowData[2] = file name (make sure to add tool hint with full path)
+            #rowData[3] = list index (based on priority, maybe just straight priority)
+            rowData = [source.LYRICS_PROVIDER_NAME, source.LYRICS_PROVIDER_VERSION, source.__file__, str(source.LYRICS_PROVIDER_PRIORITY)]
+            rowWidget = Ui_fakeCellWidget(rowData=rowData)
+            if self.OptionsDialog.lyricsSourceWidget.count() % 2 == 0: #Alternate row background
+                rowWidget.setStyleSheet("background-color: rgb(209, 220, 255);")
+            else:
+                rowWidget.setStyleSheet("background-color: rgb(188, 205, 255);")
+            self.OptionsDialog.lyricsSourceWidget.addItem(rowItem)
+            self.OptionsDialog.lyricsSourceWidget.setItemWidget(rowItem, rowWidget)
+
+            #filename, [propername, version, enableddisabled] in self.settings["lyricsSource"]["lyricsSourceList"]:
+            #self.OptionsDialog.lyricsSourceWidget.addItem(source.LYRICS_PROVIDER_NAME)
 
     def selectFont(self):
         fontDialog = QtGui.QFontDialog()

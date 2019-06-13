@@ -7,13 +7,14 @@ from cachebuilder import CacheBuilder
 from lyrics_search_functions import lyricsSearchFunctions
 from foobarhttpcontrol import foobarStatusDownloader
 from lyrics_downloader import threadedLyricsDownloader
+from lyrics_downloader import enumerateProviders
 from lyrics_cacher import LyricsCacher
 from PyQt4 import QtCore, QtGui
 from time import time as tTime
 from datetime import datetime as dTime
 from re import split as REsplit
 from re import sub as REsub
-
+from base64 import urlsafe_b64encode, urlsafe_b64decode
 from sys import exit as sys_exit
 
 
@@ -241,7 +242,10 @@ class UIFunctions(object):
                 'Advanced':
                     {'alwaysOnTop': False, 'debugModeEnabled': False, 'debugWriteEnabled': False, 'masterMatchRatio': '0.65', 'debugOutputFolder': '.'},
                 'fb2kServerInfo':
-                    {'userpassreq': False, 'user': '', 'pass': '', 'port': '8888', 'address': '127.0.0.1'}}
+                    {'userpassreq': False, 'user': '', 'pass': '', 'port': '8888', 'address': '127.0.0.1'},
+                'lyricsSource':
+                    {{}}
+            }
         else:
             #Retrieve all saved settings
             self.appSettings.beginGroup("Options")
@@ -281,6 +285,20 @@ class UIFunctions(object):
             self.appSettings.endGroup()
 
         _ALWAYS_ON_TOP_ = self.loadedOptions["Advanced"]["alwaysOnTop"]
+
+        #Load up the source and apply any saved priorities.
+        sources = enumerateProviders()
+
+        if self.loadedOptions.has_key("lyricsSource") is False:
+            self.loadedOptions["lyricsSource"] = sources
+        else:
+            finalLyricsSource = []
+            for s in sources:
+                keyname = urlsafe_b64encode("%s%s" % (s.LYRICS_PROVIDER_NAME, s.LYRICS_PROVIDER_VERSION))
+                if self.loadedOptions["lyricsSource"].has_key(keyname):
+                    s.LYRICS_PROVIDER_PRIORITY = self.loadedOptions["lyricsSource"][keyname]
+                finalLyricsSource.append(s)
+            self.loadedOptions["lyricsSource"] = finalLyricsSource
 
         #Finally apply our settings to the UI
         self.setupUiOptions()
