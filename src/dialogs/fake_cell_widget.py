@@ -4,6 +4,7 @@ from os.path import basename
 class Ui_fakeCellWidget(QtGui.QWidget):
     def __init__(self, rowData, parent=None):
         super(Ui_fakeCellWidget, self).__init__(parent)
+        self.rowData = rowData
         self.setObjectName("fakeCellWidget")
         self.resize(477, 17)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.MinimumExpanding, QtGui.QSizePolicy.Preferred)
@@ -49,14 +50,11 @@ class Ui_fakeCellWidget(QtGui.QWidget):
         self.column3.setObjectName("column3")
         self.horizontalLayout.addWidget(self.column3)
 
-        #rowData[0] = Lyrics provider name
-        #rowData[1] = provider version
-        #rowData[2] = file path (make sure to add tool hint with full path and use just hte filename in the GUI)
-        #rowData[3] = list index (based on priority, maybe just straight priority)
-        self.rowNumber.setText(rowData[3])
-        self.column1.setText(rowData[0])
-        self.column1.setToolTip(rowData[0])
-        self.column2.setText(rowData[1])
-        self.column2.setToolTip(rowData[1])
-        self.column3.setText(basename(rowData[2]))
-        self.column3.setToolTip(rowData[2])
+        #rowData = {filename, name, version, priority, enabled}
+        self.rowNumber.setText(str(rowData["priority"]))
+        self.column1.setText(rowData["name"])
+        self.column1.setToolTip(rowData["name"])
+        self.column2.setText(rowData["version"])
+        self.column2.setToolTip(rowData["version"])
+        self.column3.setText(rowData["filename"])
+        self.column3.setToolTip(rowData["filename"])

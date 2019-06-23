@@ -51,6 +51,7 @@ class Ui_MainWindow(object):
         self.gridLayout_3 = QtGui.QGridLayout(self.LyricsTab)
         self.gridLayout_3.setObjectName(_fromUtf8("gridLayout_3"))
         self.lyricsTextView = QtGui.QTextBrowser(self.LyricsTab)
+        self.lyricsTextView.setUndoRedoEnabled(True)
         self.lyricsTextView.setObjectName(_fromUtf8("lyricsTextView"))
         self.gridLayout_3.addWidget(self.lyricsTextView, 0, 0, 1, 3)
         spacerItem = QtGui.QSpacerItem(433, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
@@ -139,19 +140,19 @@ class Ui_MainWindow(object):
         MainWindow.setWindowTitle(_translate("MainWindow", "bLyrics", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.MainTab), _translate("MainWindow", "Current Status", None))
         self.lyricsTextView.setHtml(_translate("MainWindow", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
-                                                             "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
-                                                             "p, li { white-space: pre-wrap; }\n"
-                                                             "</style></head><body style=\" font-family:\'MS Shell Dlg 2\'; font-size:8.25pt; font-weight:400; font-style:normal;\">\n"
-                                                             "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:8pt;\">_LYRICS_DISPLAY_</span></p></body></html>", None))
+"<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
+"p, li { white-space: pre-wrap; }\n"
+"</style></head><body style=\" font-family:\'MS Shell Dlg 2\'; font-size:8.25pt; font-weight:400; font-style:normal;\">\n"
+"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:8pt;\">_LYRICS_DISPLAY_</span></p></body></html>", None))
         self.RefreshLyricsButton.setText(_translate("MainWindow", "Refresh", None))
         self.editLyricsButton.setText(_translate("MainWindow", "Edit", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.LyricsTab), _translate("MainWindow", "Lyrics", None))
         self.consoleO_ClearButton.setText(_translate("MainWindow", "Clear", None))
         self.consoleOutput.setHtml(_translate("MainWindow", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
-                                                            "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
-                                                            "p, li { white-space: pre-wrap; }\n"
-                                                            "</style></head><body style=\" font-family:\'MS Shell Dlg 2\'; font-size:8.25pt; font-weight:400; font-style:normal;\">\n"
-                                                            "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:8pt;\">_STDOUT_STRERR_OUTPUT_</span></p></body></html>", None))
+"<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
+"p, li { white-space: pre-wrap; }\n"
+"</style></head><body style=\" font-family:\'MS Shell Dlg 2\'; font-size:8.25pt; font-weight:400; font-style:normal;\">\n"
+"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:8pt;\">_STDOUT_STRERR_OUTPUT_</span></p></body></html>", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.ConsoleTab), _translate("MainWindow", "Console", None))
         self.Statusbar.setText(_translate("MainWindow", "<html><head/><body><p><span style=\" color:#0000ff;\">_CSS_STATUS_BAR_</span></p></body></html>", None))
         self.menuFile.setTitle(_translate("MainWindow", "File", None))

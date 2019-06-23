@@ -14,8 +14,9 @@ from time import time as tTime
 from datetime import datetime as dTime
 from re import split as REsplit
 from re import sub as REsub
-from base64 import urlsafe_b64encode, urlsafe_b64decode
+from base64 import urlsafe_b64encode
 from sys import exit as sys_exit
+from os.path import basename
 
 
 #To force this program to always be on top of other windows change this to True
@@ -226,6 +227,38 @@ class UIFunctions(object):
         else:
             return False
 
+    def qstringFixer(self, value):
+        if isinstance(value, QtCore.QString):
+            value = str(value)
+            if value == "true": value = True
+            elif value == "false": value = False
+        return value
+
+    def qtypeFixer(self, value):
+        if isinstance(value, QtCore.QString):
+            return self.qstringFixer(value)
+        elif not isinstance(value, QtCore.QVariant):
+            return value
+
+        if value.type() == QtCore.QMetaType.QString:
+            value = self.qstringFixer(value.toPyObject())
+        elif value.type() == QtCore.QMetaType.QStringList:
+            value = str(value.toPyObject().join(";")).split(";")
+            #So a QVariantMap is basically a mangled dict, with all sorts of lame Qt types
+        elif value.type() == QtCore.QMetaType.QVariantMap:
+            fixeddict = {}
+            value = value.toPyObject()
+            for key, val in value.iteritems():
+                #fix sub-dicts
+                if isinstance(val, dict):
+                    subdict = {}
+                    for key2, val2 in val.iteritems():
+                        subdict[str(key2)] = self.qtypeFixer(val2)
+                    val = subdict
+                fixeddict[str(key)] = val
+            value = fixeddict
+        return value
+
     def loadSettings(self):
         global _ALWAYS_ON_TOP_ #need to remove this in the future, global vars are not great
 
@@ -264,14 +297,7 @@ class UIFunctions(object):
                     key = str(key)
                     value = self.appSettings.value(key)
                     #Convert our QVariant into its appropriate data type
-                    if value.type() == QtCore.QMetaType.QString:
-                        value = str(value.toPyObject())
-                        #Fix true/false stuff
-                        if value == "true": value = True
-                        elif value == "false": value = False
-                    elif value.type() == QtCore.QMetaType.QStringList:
-                        value = str(value.toPyObject().join(";")).split(";")
-
+                    value = self.qtypeFixer(value)
                     self.loadedOptions[subGroup][key] = value
                 self.appSettings.endGroup()
 
@@ -287,19 +313,30 @@ class UIFunctions(object):
         _ALWAYS_ON_TOP_ = self.loadedOptions["Advanced"]["alwaysOnTop"]
 
         #Load up the source and apply any saved priorities.
-        sources = enumerateProviders()
+        rawsources = enumerateProviders()
 
-        if self.loadedOptions.has_key("lyricsSource") is False:
-            self.loadedOptions["lyricsSource"] = sources
-        else:
-            finalLyricsSource = []
-            for s in sources:
-                keyname = urlsafe_b64encode("%s%s" % (s.LYRICS_PROVIDER_NAME, s.LYRICS_PROVIDER_VERSION))
-                if self.loadedOptions["lyricsSource"].has_key(keyname):
-                    s.LYRICS_PROVIDER_PRIORITY = self.loadedOptions["lyricsSource"][keyname]
-                finalLyricsSource.append(s)
-            self.loadedOptions["lyricsSource"] = finalLyricsSource
+        #Generate our nice source list from the raw source list
+        #We are just extracting information from the provider modules
+        #All sources are enabled by default and we apply customizations later
+        #dict[filename] = {name, version, priority, enabled}
+        finalLyricsSource = {}
+        for source in rawsources:
+            filename = basename(source.__file__)
+            finalLyricsSource[filename] = {}
+            finalLyricsSource[filename]["name"] = source.LYRICS_PROVIDER_NAME
+            finalLyricsSource[filename]["version"] = source.LYRICS_PROVIDER_VERSION
+            finalLyricsSource[filename]["priority"] = source.LYRICS_PROVIDER_PRIORITY
+            finalLyricsSource[filename]["enabled"] = True
 
+        #Now go over any saved customizations (if there are any)
+        if self.loadedOptions.has_key("lyricsSource") is True:
+            for source in finalLyricsSource:
+                #Ugh QStrings annoy me sometimes
+                if self.loadedOptions["lyricsSource"]["lyricsSourceList"].has_key(source):
+                    finalLyricsSource[source]["priority"] = self.loadedOptions["lyricsSource"]["lyricsSourceList"][source]["priority"]
+                    finalLyricsSource[source]["enabled"] = self.loadedOptions["lyricsSource"]["lyricsSourceList"][source]["enabled"]
+
+        self.loadedOptions["lyricsSource"]["lyricsSourceList"] = finalLyricsSource
         #Finally apply our settings to the UI
         self.setupUiOptions()
 

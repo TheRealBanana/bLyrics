@@ -121,15 +121,29 @@ class optionsDialogFunctions(object):
         data["Advanced"]["masterMatchRatio"] = str(self.OptionsDialog.MRSelector.value())
         data["Advanced"]["alwaysOnTop"] = self.OptionsDialog.alwaysOnTopCheck.isChecked()
 
-        data["lyricsSource"]["lyricsSourceList"] = self.getLyricsSourceList()
+        data["lyricsSource"] = {}
+        data["lyricsSource"]["lyricsSourceList"] = self.retrieveLyricsSourceList()
 
         self.uiFunctionsReference.saveSettings(data)
         self.uiFunctionsReference.appSettings.sync()
         self.widget.accept()
 
-    def getLyricsSourceList(self):
-        pass
-        #Will just store the proper data in the UserData role for the row
+    def retrieveLyricsSourceList(self):
+        returnSourceList = {}
+        for itemidx in range(self.OptionsDialog.lyricsSourceWidget.count()):
+            listitem = self.OptionsDialog.lyricsSourceWidget.item(itemidx)
+            listitemwidget = self.OptionsDialog.lyricsSourceWidget.itemWidget(listitem)
+            rowData = listitemwidget.rowData
+            # rowData = {filename, name, version, priority, enabled}
+            filename = rowData["filename"]
+            returnSourceList[filename] = {}
+            returnSourceList[filename]["name"] = rowData["name"]
+            returnSourceList[filename]["version"] = rowData["version"]
+            returnSourceList[filename]["priority"] = itemidx #rowData["priority"]
+            returnSourceList[filename]["enabled"] = rowData["enabled"]
+
+        return returnSourceList
+
 
     def applyOptionsToUi(self):
         #And now we set up the options UI with the correct options
@@ -167,14 +181,14 @@ class optionsDialogFunctions(object):
 
         #Page Four - Lyrics Sources
         # Data format:
-        # dict[filename] = [propername, version, enableddisabled]
-        for source in self.settings["lyricsSource"]:
+        # dict[filename] = {name, version, priority, enabled}
+        #We want to order these by their priority in descending order.
+        orderedkeylist = sorted(self.settings["lyricsSource"]["lyricsSourceList"].keys(), key=lambda k: self.settings["lyricsSource"]["lyricsSourceList"][k]["priority"])
+        for sourcefilename in orderedkeylist:
             rowItem = QtGui.QListWidgetItem(self.OptionsDialog.lyricsSourceWidget)
-            #rowData[0] = Lyrics provider name
-            #rowData[1] = provider version
-            #rowData[2] = file name (make sure to add tool hint with full path)
-            #rowData[3] = list index (based on priority, maybe just straight priority)
-            rowData = [source.LYRICS_PROVIDER_NAME, source.LYRICS_PROVIDER_VERSION, source.__file__, str(source.LYRICS_PROVIDER_PRIORITY)]
+            rowData = self.settings["lyricsSource"]["lyricsSourceList"][sourcefilename]
+            rowData["filename"] = sourcefilename
+            #Instantiate our cell-structure-faking widget with our data as well
             rowWidget = Ui_fakeCellWidget(rowData=rowData)
             if self.OptionsDialog.lyricsSourceWidget.count() % 2 == 0: #Alternate row background
                 rowWidget.setStyleSheet("background-color: rgb(209, 220, 255);")
@@ -182,9 +196,6 @@ class optionsDialogFunctions(object):
                 rowWidget.setStyleSheet("background-color: rgb(188, 205, 255);")
             self.OptionsDialog.lyricsSourceWidget.addItem(rowItem)
             self.OptionsDialog.lyricsSourceWidget.setItemWidget(rowItem, rowWidget)
-
-            #filename, [propername, version, enableddisabled] in self.settings["lyricsSource"]["lyricsSourceList"]:
-            #self.OptionsDialog.lyricsSourceWidget.addItem(source.LYRICS_PROVIDER_NAME)
 
     def selectFont(self):
         fontDialog = QtGui.QFontDialog()
