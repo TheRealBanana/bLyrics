@@ -1,5 +1,4 @@
 from PyQt4 import QtCore, QtGui
-from os.path import basename
 
 class Ui_fakeCellWidget(QtGui.QWidget):
     def __init__(self, rowData, parent=None):

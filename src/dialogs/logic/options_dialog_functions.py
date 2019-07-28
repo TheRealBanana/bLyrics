@@ -30,6 +30,7 @@ class optionsDialogFunctions(object):
         self.widget = widget
         self.curDir = getcwd()
         self.setDir = self.curDir
+        self.lyricsCacheRef = uiFunctionsReference.lyricsCache
         #Set up connections and then apply our settings to our UI elements
         self.setupConnections()
         self.applyOptionsToUi()
@@ -49,9 +50,23 @@ class optionsDialogFunctions(object):
         QtCore.QObject.connect(self.OptionsDialog.selectFontButton, QtCore.SIGNAL(_fromUtf8("clicked()")), self.selectFont)
         QtCore.QObject.connect(self.OptionsDialog.fgColorSelector, QtCore.SIGNAL(_fromUtf8("clicked()")), self.selectFgColor)
         QtCore.QObject.connect(self.OptionsDialog.bgColorSelector, QtCore.SIGNAL(_fromUtf8("clicked()")), self.selectBgColor)
+        QtCore.QObject.connect(self.OptionsDialog.lyricsSourceWidget, QtCore.SIGNAL(_fromUtf8("currentItemChanged(QListWidgetItem*, QListWidgetItem*)")), self.highlightLyricsSourceSelection)
         QtCore.QMetaObject.connectSlotsByName(self.widget)
 
         self.OptionsDialog = self.OptionsDialog
+
+    def highlightLyricsSourceSelection(self, currentItem, lastItem):
+        #highlight selected row
+        currentitemwidget = self.OptionsDialog.lyricsSourceWidget.itemWidget(currentItem)
+        currentitemwidget.setStyleSheet("background-color: rgb(0, 205, 255);")
+        #Change last row back if we had a last row (not first click)
+        if lastItem is not None:
+            lastitemwidget = self.OptionsDialog.lyricsSourceWidget.itemWidget(lastItem)
+            if self.OptionsDialog.lyricsSourceWidget.row(lastItem) % 2 == 0: #Alternate row background
+                lastitemwidget.setStyleSheet("background-color: rgb(209, 220, 255);")
+            else:
+                lastitemwidget.setStyleSheet("background-color: rgb(188, 205, 255);")
+
     def uncheckDbgWrite(self, _):
         if self.OptionsDialog.debugWriteCheck.isChecked():
             self.OptionsDialog.debugWriteCheck.setChecked(0)
@@ -90,7 +105,6 @@ class optionsDialogFunctions(object):
         self.OptionsDialog.MRSelector.setProperty("value", 0.65)
         self.OptionsDialog.alwaysOnTopCheck.setChecked(0)
         #TODO ADD RESET FOR ROWS IN QLISTWIDGET
-
 
     def saveOptions(self):
         #Using the same data structure that loadSettings and saveSettings will be using
@@ -144,7 +158,6 @@ class optionsDialogFunctions(object):
 
         return returnSourceList
 
-
     def applyOptionsToUi(self):
         #And now we set up the options UI with the correct options
 
@@ -190,10 +203,10 @@ class optionsDialogFunctions(object):
             rowData["filename"] = sourcefilename
             #Instantiate our cell-structure-faking widget with our data as well
             rowWidget = Ui_fakeCellWidget(rowData=rowData)
-            if self.OptionsDialog.lyricsSourceWidget.count() % 2 == 0: #Alternate row background
-                rowWidget.setStyleSheet("background-color: rgb(209, 220, 255);")
-            else:
+            if self.OptionsDialog.lyricsSourceWidget.count()-1 % 2 == 0: #Alternate row background
                 rowWidget.setStyleSheet("background-color: rgb(188, 205, 255);")
+            else:
+                rowWidget.setStyleSheet("background-color: rgb(209, 220, 255);")
             self.OptionsDialog.lyricsSourceWidget.addItem(rowItem)
             self.OptionsDialog.lyricsSourceWidget.setItemWidget(rowItem, rowWidget)
 
@@ -212,7 +225,6 @@ class optionsDialogFunctions(object):
         self.fontSelection = str(fontFamily) + ", " + str(fontSize)
         self.updatePreviewBoxCSS()
         self.OptionsDialog.fontSelectionTextbox.setText(_translate("OptionsDialog", self.fontSelection, None))
-
 
     def updatePreviewBoxCSS(self):
         fontFamily, size = REsplit(",", self.fontSelection)
@@ -240,7 +252,6 @@ class optionsDialogFunctions(object):
             return selectedColor.name()
         else:
             return startColor
-
 
     def selectBgColor(self):
         bgColor = self.colorPopup(self.OptionsDialog.bgColorSelector.currentColor)

@@ -1,5 +1,4 @@
 from PyQt4.QtCore import QObject, SIGNAL
-from lyrics_cacher import LyricsCacher
 import os
 import os.path
 import re
@@ -27,6 +26,7 @@ def enumerateProviders():
     #Now sort the provider classes by priority from lowest to highest
     #Set a default priority if we dont have one
     for p in provider_classes:
+        #TODO WILL APPLY CUSTOM PRIORITIES HERE
         if hasattr(p, "LYRICS_PROVIDER_PRIORITY") is False:
             p.LYRICS_PROVIDER_PRIORITY = 10 # Default priority is 10
     return sorted(provider_classes, key=lambda provider: provider.LYRICS_PROVIDER_PRIORITY)

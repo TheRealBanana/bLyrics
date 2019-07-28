@@ -14,7 +14,6 @@ from time import time as tTime
 from datetime import datetime as dTime
 from re import split as REsplit
 from re import sub as REsub
-from base64 import urlsafe_b64encode
 from sys import exit as sys_exit
 from os.path import basename
 
@@ -277,7 +276,7 @@ class UIFunctions(object):
                 'fb2kServerInfo':
                     {'userpassreq': False, 'user': '', 'pass': '', 'port': '8888', 'address': '127.0.0.1'},
                 'lyricsSource':
-                    {{}}
+                    {"lyricsSourceList":{}}
             }
         else:
             #Retrieve all saved settings

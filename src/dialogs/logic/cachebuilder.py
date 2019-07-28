@@ -77,7 +77,6 @@ class CacheBuilder(object):
         self.killThread()
         self.dialog.close()
 
-
     def killThread(self):
         if self.cacheBuilderThread is not None:
             self.cacheBuilderWorkTask.quitting = True

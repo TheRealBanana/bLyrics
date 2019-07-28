@@ -40,7 +40,7 @@ class LyricsCacher(object):
     def getCachefileName(song, artist):
         return "%s%s" % (urlsafe_b64encode(BASE64TEMPLATE % {"SONG": song, "ARTIST": artist}), FILEEXTENSION)
 
-    #Now sure if this is the best way to do this but It works without fiddling with return values/ifs
+    #Not sure if this is the best way to do this but It works without fiddling with return values/ifs
     @staticmethod
     def noCacheForYou(*_, **__):
         return None
@@ -48,8 +48,8 @@ class LyricsCacher(object):
     def getLyricsFileList(self):
         #Only our cache files
         if self.checkLyricsDir():
-            return [f for f in os.listdir(CACHEWRITEFOLDER) if \
-                (os.path.isfile(os.path.join(CACHEWRITEFOLDER, f)) is True and \
+            return [f for f in os.listdir(CACHEWRITEFOLDER) if
+                (os.path.isfile(os.path.join(CACHEWRITEFOLDER, f)) is True and
                 (re.match("^.*%s$" % re.escape(FILEEXTENSION), f)) is not None)]
         else:
             return []
