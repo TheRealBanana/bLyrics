@@ -1,4 +1,3 @@
-from lyrics_cacher import LyricsCacher
 from PyQt4 import QtCore, QtGui
 from PyQt4.Qt import QApplication
 from lyrics_downloader import enumerateProviders
@@ -14,11 +13,11 @@ except AttributeError:
         return QtGui.QApplication.translate(context, text, disambig)
 
 class threadedCacheGenerator(QtCore.QObject):
-    def __init__(self, songdata):
+    def __init__(self, songdata, lyricsCacheRef):
         self.songdata = songdata
         self.totalsongs = len(self.songdata["playlist"])
         self.quitting = False
-        self.lyricsCacheRef = LyricsCacher()
+        self.lyricsCacheRef = lyricsCacheRef
         self.providers = [p.LyricsProvider() for p in enumerateProviders()]
         super(threadedCacheGenerator, self).__init__()
 
@@ -64,9 +63,10 @@ class threadedCacheGenerator(QtCore.QObject):
 
 
 class CacheBuilder(object):
-    def __init__(self, songdata, progressbar_widget):
+    def __init__(self, songdata, progressbar_widget, lyricsCacheRef):
         self.cacheBuilderThread = None
         self.cacheBuilderWorkTask = None
+        self.lyricsCacheRef = lyricsCacheRef
         self.progressbar_widget = progressbar_widget
         self.totalsongs = len(songdata["playlist"])
         self.songdata = songdata
@@ -108,7 +108,7 @@ class CacheBuilder(object):
         self.killThread()
 
         self.cacheBuilderThread = QtCore.QThread()
-        self.cacheBuilderWorkTask = threadedCacheGenerator(self.songdata)
+        self.cacheBuilderWorkTask = threadedCacheGenerator(self.songdata, self.lyricsCacheRef)
         self.cacheBuilderWorkTask.moveToThread(self.cacheBuilderThread)
 
         QtCore.QObject.connect(self.cacheBuilderThread, QtCore.SIGNAL("started()"), self.cacheBuilderWorkTask.generateCache)

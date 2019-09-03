@@ -524,7 +524,7 @@ p, li { white-space: pre-wrap; }
         widget.show()
         if self.cacheBuilder is not None:
             del self.cacheBuilder
-        self.cacheBuilder = CacheBuilder(songdata, cachebuilderui)
+        self.cacheBuilder = CacheBuilder(songdata, cachebuilderui, self.lyricsCache)
         self.cacheBuilder.startCacheGeneration()
 
     def cacheBuildReturn(self):

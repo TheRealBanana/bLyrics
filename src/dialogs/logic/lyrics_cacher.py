@@ -98,7 +98,7 @@ class LyricsCacher(object):
             print e
 
     def saveLyrics(self, song, artist, lyrics):
-        print "saving lyrics for %s by %s: %s" % (song, artist, len(lyrics))
+        print "saving lyrics for %s by %s" % (song, artist)
         savepath = os.path.join(CACHEWRITEFOLDER, self.getCachefileName(song, artist))
         #Most of the returned lyrics are html with <br>'s instead of proper line-breaks
         if len(lyrics.splitlines()) > 1:
