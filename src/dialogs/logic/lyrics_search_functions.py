@@ -149,7 +149,7 @@ class searchJob(QtCore.QObject):
 
                 if len(searchedsong) > 0:
                     if self.searchparams["exactMatch_Song"] == 1:
-                        if searchedsong != song:
+                        if searchedsong.lower() != song.lower():
                             idx += 1
                             continue
                     elif searchedsong.lower() not in song.lower() and SequenceMatcher(None, searchedsong.lower(), song.lower()).ratio() < MASTER_RATIO:
