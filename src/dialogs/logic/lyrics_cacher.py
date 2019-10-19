@@ -119,7 +119,7 @@ class LyricsCacher(object):
         self.filelist.append(self.getCachefileName(song, artist))
         if self.cachedLyrics is not None:
             if not self.cachedLyrics.has_key(artist):
-                self.cachedLyrics.artist = {}
+                self.cachedLyrics[artist] = {}
             self.cachedLyrics[artist][song] = lyrics
 
     def getCacheSize(self):
