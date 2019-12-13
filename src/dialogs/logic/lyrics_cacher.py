@@ -96,9 +96,10 @@ class LyricsCacher(object):
         except Exception as e:
             print "Well that shouldn't have happened..."
             print e
+            return ""
 
     def saveLyrics(self, song, artist, lyrics):
-        print "saving lyrics for %s by %s" % (song, artist)
+        print "Saving lyrics for %s by %s" % (song, artist)
         savepath = os.path.join(CACHEWRITEFOLDER, self.getCachefileName(song, artist))
         #Most of the returned lyrics are html with <br>'s instead of proper line-breaks
         if len(lyrics.splitlines()) > 1:

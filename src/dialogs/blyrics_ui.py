@@ -56,12 +56,12 @@ class Ui_MainWindow(object):
         self.gridLayout_3.addWidget(self.lyricsTextView, 0, 0, 1, 3)
         spacerItem = QtGui.QSpacerItem(433, 20, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Minimum)
         self.gridLayout_3.addItem(spacerItem, 1, 2, 1, 1)
-        self.RefreshLyricsButton = QtGui.QPushButton(self.LyricsTab)
-        self.RefreshLyricsButton.setObjectName(_fromUtf8("RefreshLyricsButton"))
-        self.gridLayout_3.addWidget(self.RefreshLyricsButton, 1, 0, 1, 1)
         self.editLyricsButton = QtGui.QPushButton(self.LyricsTab)
         self.editLyricsButton.setObjectName(_fromUtf8("editLyricsButton"))
         self.gridLayout_3.addWidget(self.editLyricsButton, 1, 1, 1, 1)
+        self.RefreshLyricsButton = QtGui.QPushButton(self.LyricsTab)
+        self.RefreshLyricsButton.setObjectName(_fromUtf8("RefreshLyricsButton"))
+        self.gridLayout_3.addWidget(self.RefreshLyricsButton, 1, 0, 1, 1)
         self.RefreshLyricsButton.raise_()
         self.lyricsTextView.raise_()
         self.editLyricsButton.raise_()
@@ -144,8 +144,8 @@ class Ui_MainWindow(object):
 "p, li { white-space: pre-wrap; }\n"
 "</style></head><body style=\" font-family:\'MS Shell Dlg 2\'; font-size:8.25pt; font-weight:400; font-style:normal;\">\n"
 "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:8pt;\">_LYRICS_DISPLAY_</span></p></body></html>", None))
-        self.RefreshLyricsButton.setText(_translate("MainWindow", "Refresh", None))
         self.editLyricsButton.setText(_translate("MainWindow", "Edit", None))
+        self.RefreshLyricsButton.setText(_translate("MainWindow", "Refresh", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.LyricsTab), _translate("MainWindow", "Lyrics", None))
         self.consoleO_ClearButton.setText(_translate("MainWindow", "Clear", None))
         self.consoleOutput.setHtml(_translate("MainWindow", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"

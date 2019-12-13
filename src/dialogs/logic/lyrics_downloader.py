@@ -33,11 +33,12 @@ def enumerateProviders():
 
 
 class threadedLyricsDownloader(QObject):
-    def __init__(self, song, artist, lyricsCacheRef):
+    def __init__(self, song, artist, lyricsCacheRef, customProvider=None):
         self.song = song
         self.artist = artist
         self.lyricsCache = lyricsCacheRef
         self.providers = [p.LyricsProvider() for p in enumerateProviders()]
+        self.customProvider = customProvider
         super(threadedLyricsDownloader, self).__init__()
 
     def doWork(self):
@@ -46,15 +47,28 @@ class threadedLyricsDownloader(QObject):
         self.emit(SIGNAL("workFinished()"))
 
     def getUpdatedLyrics(self):
-        #Check our cache, and download if missing
-        for p in self.providers:
+        #Are we being asked to retrieve from a specific source only?
+        if self.customProvider is not None:
             try:
-                lyrics = p.getLyrics(self.song, self.artist)
-                if lyrics is not None:
-                    self.last_return = [self.song, self.artist]
-                    self.lyricsCache.saveLyrics(self.song, self.artist, lyrics)
-                    return (lyrics, p.LYRICS_PROVIDER_NAME)
-            except:
-                continue
-        providerlist = ", ".join([p.LYRICS_PROVIDER_NAME for p in self.providers])
-        return ("Couldn't find lyrics for '%s' by %s. <br><br>Tried following lyrics providers: %s" % (self.song, self.artist, providerlist), None)
+                lyrics = self.customProvider.getLyrics(self.song, self.artist)
+            except Exception as e:
+                return ("There was an error retrieving from %s:<br><br>%s" % (self.customProvider.LYRICS_PROVIDER_NAME, e), None)
+            if lyrics is not None:
+                self.last_return = [self.song, self.artist]
+                self.lyricsCache.saveLyrics(self.song, self.artist, lyrics)
+                return (lyrics, self.customProvider.LYRICS_PROVIDER_NAME)
+            else:
+                return ("Couldn't find lyrics for '%s' by %s from %s." % (self.song, self.artist, self.customProvider.LYRICS_PROVIDER_NAME), None)
+        else:
+            #Check our cache, and download if missing
+            for p in self.providers:
+                try:
+                    lyrics = p.getLyrics(self.song, self.artist)
+                    if lyrics is not None:
+                        self.last_return = [self.song, self.artist]
+                        self.lyricsCache.saveLyrics(self.song, self.artist, lyrics)
+                        return (lyrics, p.LYRICS_PROVIDER_NAME)
+                except:
+                    continue
+            providerlist = ", ".join([p.LYRICS_PROVIDER_NAME for p in self.providers])
+            return ("Couldn't find lyrics for '%s' by %s. <br><br>Tried following lyrics providers: %s" % (self.song, self.artist, providerlist), None)

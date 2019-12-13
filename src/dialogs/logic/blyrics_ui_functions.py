@@ -16,7 +16,7 @@ from re import split as REsplit
 from re import sub as REsub
 from sys import exit as sys_exit
 from os.path import basename
-
+from functools import partial
 
 #To force this program to always be on top of other windows change this to True
 _ALWAYS_ON_TOP_ = False
@@ -42,6 +42,16 @@ class closableDialog(QtGui.QDialog):
         self.emit(QtCore.SIGNAL("ClosableDialogClosing"))
         QCloseEvent.accept()
 
+class DropdownToolbutton(QtGui.QToolButton):
+    def mousePressEvent(self, event):
+        if event.button() == QtCore.Qt.LeftButton:
+            # We only care if they clicked on the right side of the button where the arrow is
+            # We don't (and maybe can't?) know the exact size and position of the arrow so we'll
+            # just assume its in like the right 10% or something of the button. We'll adjust as needed.
+            if (1.0 - float(event.x())/self.width()) < 0.24: # 24% seems like a good compromise here
+                super(DropdownToolbutton, self).showMenu()
+        event.accept()
+        super(DropdownToolbutton, self).mousePressEvent(event)
 
 class UIFunctions(object):
     def __init__(self, UiReference):
@@ -122,8 +132,8 @@ class UIFunctions(object):
             self.createNewThreadWork(song, artist)
 
 
-    def createNewThreadWork(self, song, artist):
-        self.setLyricsText("Retrieving lyrics...")
+    def createNewThreadWork(self, song, artist, customProvider=None):
+        self.setLyricsText("Retrieving lyrics%s..." % ( (" from %s" % customProvider.LYRICS_PROVIDER_NAME) if customProvider is not None else ""))
         if self.lyricsDownloaderThread is not None:
             if self.lyricsDownloaderThread.isFinished() is True:
                 self.lyricsDownloaderThread.quit()
@@ -136,7 +146,7 @@ class UIFunctions(object):
             QtCore.QObject.disconnect(self.lyricsDownloaderThread, QtCore.SIGNAL("started()"), self.lyricsWorkTask.doWork)
 
         self.lyricsDownloaderThread = QtCore.QThread()
-        self.lyricsWorkTask = threadedLyricsDownloader(song, artist, self.lyricsCache)
+        self.lyricsWorkTask = threadedLyricsDownloader(song, artist, self.lyricsCache, customProvider=customProvider)
         self.lyricsWorkTask.moveToThread(self.lyricsDownloaderThread)
 
         QtCore.QObject.connect(self.lyricsDownloaderThread, QtCore.SIGNAL("started()"), self.lyricsWorkTask.doWork)
@@ -569,19 +579,23 @@ p, li { white-space: pre-wrap; }
 
     def appInit(self):
         #Stuff we need to do when the app first launches
-        self.setupConnections()
         self.loadSettings()
 
         #Clear out some of the placeholder text
         self.mainUI.consoleOutput.clear()
         self.mainUI.lyricsTextView.clear()
 
-
         #Tell the user we're not connected
         self.setLyricsText("Not connected to Foobar2000's Web server, press check your settings and make sure Foobar is running.")
         self.setWindowTitle("bLyrics  ::  Not Connected - Press Refresh or Connect")
         self.setStatusbarText("Foobar2000 Web Interface Not Found")
         self.write("bLyrics Started")
+
+        #Some things we don't know how to do in designer so we modify our layout a bit here
+        #For now its just a custom drop-down menu for our refresh button.
+        self.setupRefreshButtonDropMenu()
+
+        self.setupConnections()
 
         #Set up the internal loop that checks for a new song and retrieves lyrics when needed.
         if self.timer is None:
@@ -590,6 +604,44 @@ p, li { white-space: pre-wrap; }
         self.timer.start(5000)
         #And now we just manually execute the check_song_loop ourselves the first time instead of waiting 5s for the first iteration of the timer to finish.
         self.mainAppLoop()
+
+
+    def setupRefreshButtonDropMenu(self):
+        #In an effort to separate the UI code with our base code to allow quick editing of the ui template, we have to
+        #set up some changes to the default widgets here. I would do this in the Designer (I think its possible) but I
+        #just don't know how. This just seems wrong lol
+        height = self.mainUI.RefreshLyricsButton.sizeHint().height()
+        width = self.mainUI.RefreshLyricsButton.sizeHint().width()
+        self.mainUI.gridLayout_3.removeWidget(self.mainUI.RefreshLyricsButton)
+        self.mainUI.RefreshLyricsButton = DropdownToolbutton(self.mainUI.LyricsTab)
+        self.mainUI.RefreshLyricsButton.setStyleSheet("""
+QToolButton::menu-indicator {
+subcontrol-position: right center;
+subcontrol-origin: padding;
+left: -4px;
+top: 2px;
+}
+""")
+        self.mainUI.RefreshLyricsButton.setText("Refresh   ")
+        self.mainUI.RefreshLyricsButton.setMinimumSize(QtCore.QSize(75, 23))
+        self.mainUI.RefreshLyricsButton.setObjectName(_fromUtf8("RefreshLyricsButton"))
+        self.mainUI.gridLayout_3.addWidget(self.mainUI.RefreshLyricsButton, 1, 0, 1, 1)
+        #Add a menu to our refresh button so we can update from a specific source.
+        self.mainUI.refreshButtonDropMenu = QtGui.QMenu()
+        self.mainUI.providerListMenu = QtGui.QMenu("Refresh with provider...")
+        providerlist = enumerateProviders()
+        #Programatically create our menu entries and set their various connections
+        for p in providerlist:
+            action = QtGui.QAction(self.MainWindow)
+            action.setText("Refresh with lyrics from %s" % p.LYRICS_PROVIDER_NAME)
+            actionfunc = partial(self.createCustomWorkThread, p.LyricsProvider()) # Instantiating is not a great idea but we're doing it anyway. I need to fix this.
+            QtCore.QObject.connect(action, QtCore.SIGNAL(_fromUtf8("triggered()")), actionfunc)
+            self.mainUI.providerListMenu.addAction(action)
+        self.mainUI.refreshButtonDropMenu.addMenu(self.mainUI.providerListMenu)
+        self.mainUI.RefreshLyricsButton.setMenu(self.mainUI.refreshButtonDropMenu)
+
+    def createCustomWorkThread(self, provider):
+        self.createNewThreadWork(self.actual_song, self.actual_artist, customProvider=provider)
 
     def setupConnections(self):
         mainWindow = self.mainUI.centralwidget.window()
