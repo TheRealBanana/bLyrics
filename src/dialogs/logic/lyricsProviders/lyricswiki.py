@@ -1,16 +1,19 @@
-import re, HTMLParser, urllib
-from suds.client import Client
+import HTMLParser
+import urllib
+import urllib2
+import re
+import json
 from PyQt4 import QtCore
 
 
 
-LYRICS_PROVIDER_NAME="Lyricswiki"
-LYRICS_PROVIDER_VERSION="1.1"
+LYRICS_PROVIDER_NAME="Lyricswiki (fandom)"
+LYRICS_PROVIDER_VERSION="1.2"
 #Lyrics provider priority allows bLyrics to order lyrics providers properly. Lower numbered providers will be used
 #before higher numbered providers. Put the really slow ones at the end if you want cache generation to be quick.
 #Otherwise make the most reliable (in terms of lyrical content) the first priority. Providers with the same priority
 #are not guaranteed to run in any specific order.
-LYRICS_PROVIDER_PRIORITY=0
+LYRICS_PROVIDER_PRIORITY=1
 
 
 try:
@@ -43,17 +46,38 @@ class LyricsProvider(object):
         self.LYRICS_PROVIDER_VERSION = LYRICS_PROVIDER_VERSION
 
     def getLyrics(self, song, artist):
-        url = "http://lyrics.wikia.com/server.php?wsdl"
-        cli = Client(url)
+        #Using their api.php format because I can't get suds to work anymore after fandom took over
+        downloaderHeaders = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:77.0) Gecko/20100101 Firefox/77.0",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.5",
+            "Accept-Encoding": "deflate",
+            "DNT": "1",
+            "Connection": "keep-alive",
+        }
+        url = "http://lyrics.fandom.com/api.php?fmt=json&func=getSong&artist=%s&song=%s"
+
+        query_url = url % (urllib.quote_plus(artist), urllib.quote_plus(song))
         try:
-            lurl = cli.service.getSong(_pUnescape(artist), _pUnescape(song)).url
+            request = urllib2.Request(query_url, None, downloaderHeaders)
+            search_query = urllib2.urlopen(request)
+            search_result = search_query.read()
+            search_query.close()
         except:
             return None
-        #If the url contains the suffix 'edit' somewhere we know there are no lyrics for this song.
-        if re.match("^(.*)action=edit$", lurl) is not None:
+
+        #Turn the json results into a dictionary after some minor adjustment
+        search_result = search_result.replace("'", '"').replace("song = ", "")
+        search_result_dict = json.loads(search_result)
+        if search_result_dict["lyrics"] == "Not found":
             return None
+
+        #Everything below is pretty much the same, as I'm assuming none of the other parts changed.
+        #I havent thoroughly tested it yet but it seems fine so far. Unknown how much of the below code
+        #is unnecessary now though.
+
         #Now we open the URL and return the html
-        urlOpener = urllib.urlopen(lurl)
+        urlOpener = urllib.urlopen(search_result_dict["url"])
         html = urlOpener.read()
         urlOpener.close()
         #Test if its been encoded or not

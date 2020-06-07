@@ -9,7 +9,7 @@ LYRICS_PROVIDER_VERSION="1.1"
 #before higher numbered providers. Put the really slow ones at the end if you want cache generation to be quick.
 #Otherwise make the most reliable (in terms of lyrical content) the first priority. Providers with the same priority
 #are not guaranteed to run in any specific order.
-LYRICS_PROVIDER_PRIORITY=1
+LYRICS_PROVIDER_PRIORITY=0
 
 class LyricsProvider(object):
     def __init__(self, MASTER_RATIO=0.65):
@@ -44,7 +44,7 @@ class LyricsProvider(object):
         if search_results is not None:
             split_results = re.split("<td class=\"text-left visitedlyr\".*?>", search_results.group(1))
             for idx, result in enumerate(split_results):
-                result_url, result_songartist = re.search("%s\..*?<a href=\"(.*?)\">((?:.*?)(?:-|by)(?:.*))" % str(idx+1), result).groups()
+                result_url, result_songartist = re.search("%s\..*?<a href=\"(.*?)\">((?:.*?)-(?:.*))" % str(idx+1), result).groups()
                 result_song, result_artist = re.search("<b>\"(.*?)\"</b>\s+</a>\s+-\s+<b>(.*?)</b><br>", result_songartist).groups()
 
                 #Check if this result is the right one
