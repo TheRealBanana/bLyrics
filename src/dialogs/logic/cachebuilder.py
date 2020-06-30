@@ -41,11 +41,11 @@ class threadedCacheGenerator(QtCore.QObject):
 
 
     def generateCache(self):
-        i = 0
-        while self.quitting is False and i < self.totalsongs:
+        for i in range(self.totalsongs):
+            if self.quitting: break
             artist = self.songdata["playlist"][i]["a"].encode("utf8")
             song = self.songdata["playlist"][i]["t"].encode("utf8")
-            self.emit(QtCore.SIGNAL("cachegenProgressUpdate"), i, song, artist)
+            self.emit(QtCore.SIGNAL("cachegenProgressUpdate"), i+1, song, artist)
             QApplication.processEvents()
             if self.lyricsCacheRef.checkSong(song, artist) is False:
                 lyrics, lyricsprovidername = self.getUpdatedLyrics(song, artist)
@@ -56,10 +56,10 @@ class threadedCacheGenerator(QtCore.QObject):
                     self.emit(QtCore.SIGNAL("print"), lyrics.replace("<br>", ""))
             #else:
             #    self.emit(QtCore.SIGNAL("print"), "Lyrics for '%s' by %s are already cached." % (song, artist))
-            i += 1
             #Qt will crash if we overload it with signals so this just throttles it a bit, not noticeable to end user
             sleep(0.001)
         self.emit(QtCore.SIGNAL("cacheGenerationComplete"))
+        self.emit(QtCore.SIGNAL("workFinished()"))
 
 
 class CacheBuilder(object):
@@ -98,9 +98,13 @@ class CacheBuilder(object):
         print s
         QtGui.QApplication.processEvents()
 
-    #Signal bucket brigade, only for the most pr0 coders ofc
     def generationFinished(self):
-        self.dialog.emit(QtCore.SIGNAL("cacheGenerationComplete"))
+        print "Done generating cache files."
+        #Get a main-window reference
+        for w in QApplication.topLevelWidgets():
+            if isinstance(w, QtGui.QMainWindow):
+                mainwindow = w
+        QtGui.QMessageBox.information(mainwindow, "Cache Generation Complete", "Finished generating cache files. Check the console tab for for additional information.", QtGui.QMessageBox.Ok)
         self.dialog.close()
 
     def startCacheGeneration(self):

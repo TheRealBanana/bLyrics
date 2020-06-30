@@ -526,7 +526,6 @@ p, li { white-space: pre-wrap; }
         widget = QtGui.QDialog(self.MainWindow)
         cachebuilderui = Ui_genericProgressDialog()
         cachebuilderui.setupUi(widget)
-        QtCore.QObject.connect(widget, QtCore.SIGNAL("cacheGenerationComplete"), self.cacheBuildReturn)
        # widget.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
         widget.setWindowIcon(QtGui.QIcon(":/icon/bLyrics.ico"))
         widget.setWindowTitle("Pre-Generating Cache Files...")
@@ -536,10 +535,6 @@ p, li { white-space: pre-wrap; }
             del self.cacheBuilder
         self.cacheBuilder = CacheBuilder(songdata, cachebuilderui, self.lyricsCache)
         self.cacheBuilder.startCacheGeneration()
-
-    def cacheBuildReturn(self):
-        print "Done generating cache files."
-        QtGui.QMessageBox.information(self.MainWindow, "Cache Generation Complete", "Finished generating cache files. Check the console tab for for additional information.", QtGui.QMessageBox.Ok)
 
     def searchLyricsAction(self):
         #Cant search if we dont have our cache loaded so check that first
