@@ -1,4 +1,5 @@
 from PyQt4.QtCore import QObject, SIGNAL
+from ntpath import basename
 import os
 import os.path
 import re
@@ -6,38 +7,54 @@ import sys
 
 #I hate this function. I had such an awesomely simple setup using __import__() but pyinstaller just has to be ornery
 #After much tinkering this is the only solution I've found that works under normal python and pyinstaller's bundled python
-def enumerateProviders():
-    provider_classes = []
-    if getattr(sys, 'frozen', False):
-        providerdir = os.path.join(sys._MEIPASS, "lyricsProviders")
-        listdir = "./"
-    else:
-        providerdir = os.sep.join(re.split(re.escape(os.sep), os.path.realpath(__file__))[:-1])
-        listdir = "./lyricsProviders/"
-    os.chdir(providerdir)
-    sys.path.append(providerdir)
-    filelist = [re.match("^(.*)\.py$", x).group(1) for x in os.listdir(listdir) if os.path.isfile(listdir+x) and re.match("^.*\.py$", x) and x != "__init__.py"]
-    importlist = __import__("lyricsProviders", fromlist=filelist, level=0)
-    for f in filelist:
-        if f in dir(importlist):
-            l = getattr(importlist, f)
-            if hasattr(l, "LyricsProvider"):
-                provider_classes.append(l)
-    #Now sort the provider classes by priority from lowest to highest
-    #Set a default priority if we dont have one
-    for p in provider_classes:
-        #TODO WILL APPLY CUSTOM PRIORITIES HERE
-        if hasattr(p, "LYRICS_PROVIDER_PRIORITY") is False:
-            p.LYRICS_PROVIDER_PRIORITY = 10 # Default priority is 10
-    return sorted(provider_classes, key=lambda provider: provider.LYRICS_PROVIDER_PRIORITY)
+
+class lyricsProviders(object):
+    def __init__(self):
+        self.providerList = self.enumerateProviders() # No custom priorities initially, have to run initProviderList().
+
+    def initProviderList(self, saved_priorities):
+        self.providerList = self.enumerateProviders(saved_priorities)
+
+    def getProviders(self):
+        return self.providerList
+
+    def enumerateProviders(self, saved_priorities={}):
+        provider_classes = []
+        if getattr(sys, 'frozen', False):
+            providerdir = os.path.join(sys._MEIPASS, "lyricsProviders")
+            listdir = "./"
+        else:
+            providerdir = os.sep.join(re.split(re.escape(os.sep), os.path.realpath(__file__))[:-1])
+            listdir = "./lyricsProviders/"
+        os.chdir(providerdir)
+        sys.path.append(providerdir)
+        filelist = [re.match("^(.*)\.py$", x).group(1) for x in os.listdir(listdir) if os.path.isfile(listdir+x) and re.match("^.*\.py$", x) and x != "__init__.py"]
+        importlist = __import__("lyricsProviders", fromlist=filelist, level=0)
+        for f in filelist:
+            if f in dir(importlist):
+                l = getattr(importlist, f)
+                if hasattr(l, "LyricsProvider"):
+                    provider_classes.append(l)
+        #Now sort the provider classes by priority from lowest to highest
+        #Set a default priority if we dont have one
+        for p in provider_classes:
+            p.ENABLED = True
+            if hasattr(p, "LYRICS_PROVIDER_PRIORITY") is False:
+                p.LYRICS_PROVIDER_PRIORITY = 10 # Default priority is 10
+            #TODO WILL APPLY CUSTOM PRIORITIES HERE
+            if saved_priorities.has_key(basename(p.__file__)):
+                p.LYRICS_PROVIDER_PRIORITY = saved_priorities[basename(p.__file__)]["priority"]
+                p.ENABLED = saved_priorities[basename(p.__file__)]["enabled"]
+
+        return sorted(provider_classes, key=lambda provider: provider.LYRICS_PROVIDER_PRIORITY)
 
 
 class threadedLyricsDownloader(QObject):
-    def __init__(self, song, artist, lyricsCacheRef, customProvider=None):
+    def __init__(self, song, artist, lyricsCacheRef, providerListRef, customProvider=None):
         self.song = song
         self.artist = artist
         self.lyricsCache = lyricsCacheRef
-        self.providers = [p.LyricsProvider() for p in enumerateProviders()]
+        self.providers = [p.LyricsProvider() for p in providerListRef.getProviders()]
         self.customProvider = customProvider
         super(threadedLyricsDownloader, self).__init__()
 

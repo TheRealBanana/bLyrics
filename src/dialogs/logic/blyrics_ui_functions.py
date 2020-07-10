@@ -7,7 +7,7 @@ from cachebuilder import CacheBuilder
 from lyrics_search_functions import lyricsSearchFunctions
 from foobarhttpcontrol import foobarStatusDownloader
 from lyrics_downloader import threadedLyricsDownloader
-from lyrics_downloader import enumerateProviders
+from lyrics_downloader import lyricsProviders
 from lyrics_cacher import LyricsCacher
 from PyQt4 import QtCore, QtGui
 from time import time as tTime
@@ -66,6 +66,7 @@ class UIFunctions(object):
         self.actual_song = ""
         self.last_song = None
         self.lyricsCache = LyricsCacher()
+        self.lyricsProviders = lyricsProviders()
 #        self.lyricsCache.preloadLyricsCacheIntoMemory()
         self.lyricsDownloader = None
         self.lyricsDownloaderThread = None
@@ -146,7 +147,7 @@ class UIFunctions(object):
             QtCore.QObject.disconnect(self.lyricsDownloaderThread, QtCore.SIGNAL("started()"), self.lyricsWorkTask.doWork)
 
         self.lyricsDownloaderThread = QtCore.QThread()
-        self.lyricsWorkTask = threadedLyricsDownloader(song, artist, self.lyricsCache, customProvider=customProvider)
+        self.lyricsWorkTask = threadedLyricsDownloader(song, artist, self.lyricsCache, self.lyricsProviders, customProvider=customProvider)
         self.lyricsWorkTask.moveToThread(self.lyricsDownloaderThread)
 
         QtCore.QObject.connect(self.lyricsDownloaderThread, QtCore.SIGNAL("started()"), self.lyricsWorkTask.doWork)
@@ -210,6 +211,9 @@ class UIFunctions(object):
         #Now that we're done iterating over the data we can sync it and finish
         self.appSettings.endGroup()
         self.loadedOptions = data
+        #Update provider options
+        self.lyricsProviders.initProviderList(self.loadedOptions["lyricsSource"]["lyricsSourceList"])
+        self.setupRefreshButtonDropMenu()
         #Now we update the Ui
         self.setupUiOptions()
 
@@ -322,7 +326,7 @@ class UIFunctions(object):
         _ALWAYS_ON_TOP_ = self.loadedOptions["Advanced"]["alwaysOnTop"]
 
         #Load up the source and apply any saved priorities.
-        rawsources = enumerateProviders()
+        rawsources = self.lyricsProviders.providerList
 
         #Generate our nice source list from the raw source list
         #We are just extracting information from the provider modules
@@ -346,6 +350,8 @@ class UIFunctions(object):
                     finalLyricsSource[source]["enabled"] = self.loadedOptions["lyricsSource"]["lyricsSourceList"][source]["enabled"]
 
         self.loadedOptions["lyricsSource"]["lyricsSourceList"] = finalLyricsSource
+        #Apply customizations to loaded list of providers
+        self.lyricsProviders.initProviderList(self.loadedOptions["lyricsSource"]["lyricsSourceList"])
         #Finally apply our settings to the UI
         self.setupUiOptions()
 
@@ -533,7 +539,7 @@ p, li { white-space: pre-wrap; }
         widget.show()
         if self.cacheBuilder is not None:
             del self.cacheBuilder
-        self.cacheBuilder = CacheBuilder(songdata, cachebuilderui, self.lyricsCache)
+        self.cacheBuilder = CacheBuilder(songdata, cachebuilderui, self.lyricsCache, self.lyricsProviders)
         self.cacheBuilder.startCacheGeneration()
 
     def searchLyricsAction(self):
@@ -624,7 +630,7 @@ top: 2px;
         #Add a menu to our refresh button so we can update from a specific source.
         self.mainUI.refreshButtonDropMenu = QtGui.QMenu()
         self.mainUI.providerListMenu = QtGui.QMenu("Refresh with provider...")
-        providerlist = enumerateProviders()
+        providerlist = self.lyricsProviders.providerList
         #Programatically create our menu entries and set their various connections
         for p in providerlist:
             action = QtGui.QAction(self.MainWindow)
