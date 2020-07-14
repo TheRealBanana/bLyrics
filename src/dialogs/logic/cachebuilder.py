@@ -17,7 +17,7 @@ class threadedCacheGenerator(QtCore.QObject):
         self.totalsongs = len(self.songdata["playlist"])
         self.quitting = False
         self.lyricsCacheRef = lyricsCacheRef
-        self.providers = [p.LyricsProvider() for p in providerListRef.getProviders()]
+        self.providers = [p.LyricsProvider() for p in providerListRef.providerList]
         super(threadedCacheGenerator, self).__init__()
 
     def getUpdatedLyrics(self, song, artist):

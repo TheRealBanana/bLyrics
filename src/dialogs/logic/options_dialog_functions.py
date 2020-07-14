@@ -51,6 +51,8 @@ class optionsDialogFunctions(object):
         QtCore.QObject.connect(self.OptionsDialog.fgColorSelector, QtCore.SIGNAL(_fromUtf8("clicked()")), self.selectFgColor)
         QtCore.QObject.connect(self.OptionsDialog.bgColorSelector, QtCore.SIGNAL(_fromUtf8("clicked()")), self.selectBgColor)
         QtCore.QObject.connect(self.OptionsDialog.lyricsSourceWidget, QtCore.SIGNAL(_fromUtf8("currentItemChanged(QListWidgetItem*, QListWidgetItem*)")), self.highlightLyricsSourceSelection)
+        QtCore.QObject.connect(self.OptionsDialog.enableDisableButton, QtCore.SIGNAL(_fromUtf8("clicked()")), self.enableDisableLyricsSource)
+
         QtCore.QMetaObject.connectSlotsByName(self.widget)
 
         self.OptionsDialog = self.OptionsDialog
@@ -58,14 +60,12 @@ class optionsDialogFunctions(object):
     def highlightLyricsSourceSelection(self, currentItem, lastItem):
         #highlight selected row
         currentitemwidget = self.OptionsDialog.lyricsSourceWidget.itemWidget(currentItem)
-        currentitemwidget.setStyleSheet("background-color: rgb(0, 205, 255);")
+        self.setRowColor(currentitemwidget, self.OptionsDialog.lyricsSourceWidget.row(currentItem))
+        self.OptionsDialog.enableDisableButton.setText(["Enable", "Disable"][int(currentitemwidget.rowData["enabled"])])
         #Change last row back if we had a last row (not first click)
         if lastItem is not None:
             lastitemwidget = self.OptionsDialog.lyricsSourceWidget.itemWidget(lastItem)
-            if self.OptionsDialog.lyricsSourceWidget.row(lastItem) % 2 == 0: #Alternate row background
-                lastitemwidget.setStyleSheet("background-color: rgb(209, 220, 255);")
-            else:
-                lastitemwidget.setStyleSheet("background-color: rgb(188, 205, 255);")
+            self.setRowColor(lastitemwidget, self.OptionsDialog.lyricsSourceWidget.row(lastItem))
 
     def uncheckDbgWrite(self, _):
         if self.OptionsDialog.debugWriteCheck.isChecked():
@@ -203,12 +203,11 @@ class optionsDialogFunctions(object):
             rowData["filename"] = sourcefilename
             #Instantiate our cell-structure-faking widget with our data as well
             rowWidget = Ui_fakeCellWidget(rowData=rowData)
-            if self.OptionsDialog.lyricsSourceWidget.count()-1 % 2 == 0: #Alternate row background
-                rowWidget.setStyleSheet("background-color: rgb(188, 205, 255);")
-            else:
-                rowWidget.setStyleSheet("background-color: rgb(209, 220, 255);")
             self.OptionsDialog.lyricsSourceWidget.addItem(rowItem)
             self.OptionsDialog.lyricsSourceWidget.setItemWidget(rowItem, rowWidget)
+            self.setRowColor(rowWidget, self.OptionsDialog.lyricsSourceWidget.row(rowItem))
+        #Initilize our Enable/Disable button
+        self.OptionsDialog.enableDisableButton.setText("Disable")
 
     def selectFont(self):
         fontDialog = QtGui.QFontDialog()
@@ -282,3 +281,27 @@ class optionsDialogFunctions(object):
         fileDialog.setFileMode(QtGui.QFileDialog.DirectoryOnly)
         chosenFile = fileDialog.getExistingDirectory(caption="Choose where to save debug output...", directory=self.setDir)
         self.OptionsDialog.folderPathText.setText(_translate("OptionsDialog", chosenFile, None))
+
+    def setRowColor(self, listitemwidget, rowindex):
+        #Set current selection color
+        currentselectionitem = self.OptionsDialog.lyricsSourceWidget.currentItem()
+        if self.OptionsDialog.lyricsSourceWidget.itemWidget(currentselectionitem) == listitemwidget:
+            if listitemwidget.rowData["enabled"] is False:
+                listitemwidget.setStyleSheet("background-color: rgb(199, 66, 0);")
+            else:
+                listitemwidget.setStyleSheet("background-color: rgb(0, 205, 255);")
+        #Grey out disabled items
+        elif listitemwidget.rowData["enabled"] is False:
+            listitemwidget.setStyleSheet("background-color: rgb(130, 130, 130);")
+        elif rowindex % 2 == 0: #Alternate row background
+            listitemwidget.setStyleSheet("background-color: rgb(188, 205, 255);")
+        else:
+            listitemwidget.setStyleSheet("background-color: rgb(209, 220, 255);")
+
+    def enableDisableLyricsSource(self):
+        listitem = self.OptionsDialog.lyricsSourceWidget.item(self.OptionsDialog.lyricsSourceWidget.currentRow()) # Has our data
+        listitemwidget = self.OptionsDialog.lyricsSourceWidget.itemWidget(listitem)
+        listitemwidget.rowData["enabled"] = bool(listitemwidget.rowData["enabled"] ^ 1) #Toggle enable/disable
+        self.setRowColor(listitemwidget, self.OptionsDialog.lyricsSourceWidget.row(listitem))
+        self.OptionsDialog.enableDisableButton.setText(["Enable", "Disable"][int(listitemwidget.rowData["enabled"])])
+

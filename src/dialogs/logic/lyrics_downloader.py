@@ -15,9 +15,6 @@ class lyricsProviders(object):
     def initProviderList(self, saved_priorities):
         self.providerList = self.enumerateProviders(saved_priorities)
 
-    def getProviders(self):
-        return self.providerList
-
     def enumerateProviders(self, saved_priorities={}):
         provider_classes = []
         if getattr(sys, 'frozen', False):
@@ -38,13 +35,13 @@ class lyricsProviders(object):
         #Now sort the provider classes by priority from lowest to highest
         #Set a default priority if we dont have one
         for p in provider_classes:
-            p.ENABLED = True
+            p.LyricsProvider.ENABLED = True
             if hasattr(p, "LYRICS_PROVIDER_PRIORITY") is False:
                 p.LYRICS_PROVIDER_PRIORITY = 10 # Default priority is 10
             #TODO WILL APPLY CUSTOM PRIORITIES HERE
             if saved_priorities.has_key(basename(p.__file__)):
                 p.LYRICS_PROVIDER_PRIORITY = saved_priorities[basename(p.__file__)]["priority"]
-                p.ENABLED = saved_priorities[basename(p.__file__)]["enabled"]
+                p.LyricsProvider.ENABLED = saved_priorities[basename(p.__file__)]["enabled"]
 
         return sorted(provider_classes, key=lambda provider: provider.LYRICS_PROVIDER_PRIORITY)
 
@@ -54,7 +51,7 @@ class threadedLyricsDownloader(QObject):
         self.song = song
         self.artist = artist
         self.lyricsCache = lyricsCacheRef
-        self.providers = [p.LyricsProvider() for p in providerListRef.getProviders()]
+        self.providers = [p.LyricsProvider() for p in providerListRef.providerList]
         self.customProvider = customProvider
         super(threadedLyricsDownloader, self).__init__()
 
@@ -77,8 +74,9 @@ class threadedLyricsDownloader(QObject):
             else:
                 return ("Couldn't find lyrics for '%s' by %s from %s." % (self.song, self.artist, self.customProvider.LYRICS_PROVIDER_NAME), None)
         else:
-            #Check our cache, and download if missing
             for p in self.providers:
+                if p.ENABLED is False:
+                    continue
                 try:
                     lyrics = p.getLyrics(self.song, self.artist)
                     if lyrics is not None:
