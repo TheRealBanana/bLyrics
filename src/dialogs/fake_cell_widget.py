@@ -50,7 +50,7 @@ class Ui_fakeCellWidget(QtGui.QWidget):
         self.horizontalLayout.addWidget(self.column3)
 
         #rowData = {filename, name, version, priority, enabled}
-        self.rowNumber.setText(str(rowData["priority"]))
+        self.rowNumber.setText(str(rowData["priority"]+1))
         self.column1.setText(rowData["name"])
         self.column1.setToolTip(rowData["name"])
         self.column2.setText(rowData["version"])

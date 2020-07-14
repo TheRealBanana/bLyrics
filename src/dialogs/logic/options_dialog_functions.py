@@ -51,7 +51,7 @@ class optionsDialogFunctions(object):
         QtCore.QObject.connect(self.OptionsDialog.fgColorSelector, QtCore.SIGNAL(_fromUtf8("clicked()")), self.selectFgColor)
         QtCore.QObject.connect(self.OptionsDialog.bgColorSelector, QtCore.SIGNAL(_fromUtf8("clicked()")), self.selectBgColor)
         QtCore.QObject.connect(self.OptionsDialog.lyricsSourceWidget, QtCore.SIGNAL(_fromUtf8("currentItemChanged(QListWidgetItem*, QListWidgetItem*)")), self.highlightLyricsSourceSelection)
-        QtCore.QObject.connect(self.OptionsDialog.lyricsSourceWidget.model(), QtCore.SIGNAL(_fromUtf8("rowsMoved(QModelIndex, int, int, const QModelIndex, int)")), self.listChanged)
+        QtCore.QObject.connect(self.OptionsDialog.lyricsSourceWidget.model(), QtCore.SIGNAL(_fromUtf8("rowsMoved(QModelIndex, int, int, QModelIndex, int)")), self.listChanged)
         QtCore.QObject.connect(self.OptionsDialog.enableDisableButton, QtCore.SIGNAL(_fromUtf8("clicked()")), self.enableDisableLyricsSource)
 
         QtCore.QMetaObject.connectSlotsByName(self.widget)
@@ -313,3 +313,4 @@ class optionsDialogFunctions(object):
             listitem = self.OptionsDialog.lyricsSourceWidget.item(itemidx)
             listitemwidget = self.OptionsDialog.lyricsSourceWidget.itemWidget(listitem)
             self.setRowColor(listitemwidget, self.OptionsDialog.lyricsSourceWidget.row(listitem))
+            listitemwidget.rowNumber.setText(str(itemidx+1))
