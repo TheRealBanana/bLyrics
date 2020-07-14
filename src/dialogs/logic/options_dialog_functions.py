@@ -51,6 +51,7 @@ class optionsDialogFunctions(object):
         QtCore.QObject.connect(self.OptionsDialog.fgColorSelector, QtCore.SIGNAL(_fromUtf8("clicked()")), self.selectFgColor)
         QtCore.QObject.connect(self.OptionsDialog.bgColorSelector, QtCore.SIGNAL(_fromUtf8("clicked()")), self.selectBgColor)
         QtCore.QObject.connect(self.OptionsDialog.lyricsSourceWidget, QtCore.SIGNAL(_fromUtf8("currentItemChanged(QListWidgetItem*, QListWidgetItem*)")), self.highlightLyricsSourceSelection)
+        QtCore.QObject.connect(self.OptionsDialog.lyricsSourceWidget.model(), QtCore.SIGNAL(_fromUtf8("rowsMoved(QModelIndex, int, int, const QModelIndex, int)")), self.listChanged)
         QtCore.QObject.connect(self.OptionsDialog.enableDisableButton, QtCore.SIGNAL(_fromUtf8("clicked()")), self.enableDisableLyricsSource)
 
         QtCore.QMetaObject.connectSlotsByName(self.widget)
@@ -305,3 +306,10 @@ class optionsDialogFunctions(object):
         self.setRowColor(listitemwidget, self.OptionsDialog.lyricsSourceWidget.row(listitem))
         self.OptionsDialog.enableDisableButton.setText(["Enable", "Disable"][int(listitemwidget.rowData["enabled"])])
 
+    def listChanged(self, sourceParent, sourceStart, sourceEnd, destinationParent, destinationRow):
+        #Update row colors. We could be precise and determine exactly which rows changed but its far easier
+        #just to update all the rows.
+        for itemidx in range(self.OptionsDialog.lyricsSourceWidget.count()):
+            listitem = self.OptionsDialog.lyricsSourceWidget.item(itemidx)
+            listitemwidget = self.OptionsDialog.lyricsSourceWidget.itemWidget(listitem)
+            self.setRowColor(listitemwidget, self.OptionsDialog.lyricsSourceWidget.row(listitem))

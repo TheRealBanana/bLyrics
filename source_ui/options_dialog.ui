@@ -778,7 +778,6 @@ background-color: rgb(255, 255, 255);</string>
         </item>
        </layout>
        <zorder>lyricsSourceWidget</zorder>
-       <zorder>lyricsSourceWidget</zorder>
        <zorder>columnHeaderWidget</zorder>
       </widget>
      </item>
