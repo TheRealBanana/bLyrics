@@ -306,7 +306,8 @@ class optionsDialogFunctions(object):
         self.setRowColor(listitemwidget, self.OptionsDialog.lyricsSourceWidget.row(listitem))
         self.OptionsDialog.enableDisableButton.setText(["Enable", "Disable"][int(listitemwidget.rowData["enabled"])])
 
-    def listChanged(self, sourceParent, sourceStart, sourceEnd, destinationParent, destinationRow):
+    #def listChanged(self, sourceParent, sourceStart, sourceEnd, destinationParent, destinationRow):
+    def listChanged(self, _, __, ___, ____, _____):
         #Update row colors. We could be precise and determine exactly which rows changed but its far easier
         #just to update all the rows.
         for itemidx in range(self.OptionsDialog.lyricsSourceWidget.count()):

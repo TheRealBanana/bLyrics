@@ -124,7 +124,7 @@ class UIFunctions(object):
         if self.hasSongChanged() or forced:
             if self.lyricsCache.checkSong(song, artist) is True:
                 cachedlyrics = self.lyricsCache.getLyrics(song, artist)
-                if len(cachedlyrics) > 0:
+                if cachedlyrics is not None  and len(cachedlyrics) > 0:
                     print "Returned cached lyrics for '%s' by %s" % (song, artist)
                     self.setLyricsText(cachedlyrics)
                     return
@@ -658,4 +658,6 @@ top: 2px;
         QtCore.QObject.connect(self.mainUI.actionPregenLyricsCache, QtCore.SIGNAL(_fromUtf8("triggered()")), self.pregenLyricsCache)
         QtCore.QObject.connect(self.mainUI.consoleO_ClearButton, QtCore.SIGNAL(_fromUtf8("clicked()")), self.clear_console)
         QtCore.QObject.connect(self.mainUI.actionPreloadLyricsCache, QtCore.SIGNAL(_fromUtf8("triggered()")), self.loadLyricsCacheIntoMemory)
+        QtCore.QObject.connect(self.mainUI.actionConvertOldCache, QtCore.SIGNAL(_fromUtf8("triggered()")), self.lyricsCache.getCacheSize)
+
         QtCore.QMetaObject.connectSlotsByName(mainWindow)

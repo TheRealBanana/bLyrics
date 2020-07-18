@@ -201,6 +201,7 @@ p, li { white-space: pre-wrap; }
     </property>
     <addaction name="aboutMenuItem"/>
     <addaction name="actionPreloadLyricsCache"/>
+    <addaction name="actionConvertOldCache"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuHelp"/>
@@ -243,6 +244,11 @@ p, li { white-space: pre-wrap; }
   <action name="actionPregenLyricsCache">
    <property name="text">
     <string>Generate Lyrics Cache</string>
+   </property>
+  </action>
+  <action name="actionConvertOldCache">
+   <property name="text">
+    <string>Convert old cache to new format</string>
    </property>
   </action>
  </widget>

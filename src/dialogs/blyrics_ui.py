@@ -112,6 +112,8 @@ class Ui_MainWindow(object):
         self.actionClearLyricsCache.setObjectName(_fromUtf8("actionClearLyricsCache"))
         self.actionPregenLyricsCache = QtGui.QAction(MainWindow)
         self.actionPregenLyricsCache.setObjectName(_fromUtf8("actionPregenLyricsCache"))
+        self.actionConvertOldCache = QtGui.QAction(MainWindow)
+        self.actionConvertOldCache.setObjectName(_fromUtf8("actionConvertOldCache"))
         self.menuFile.addAction(self.actionRefresh)
         self.menuFile.addSeparator()
         self.menuFile.addAction(self.actionOptions)
@@ -123,6 +125,7 @@ class Ui_MainWindow(object):
         self.menuFile.addAction(self.actionQuit)
         self.menuHelp.addAction(self.aboutMenuItem)
         self.menuHelp.addAction(self.actionPreloadLyricsCache)
+        self.menuHelp.addAction(self.actionConvertOldCache)
         self.menubar.addAction(self.menuFile.menuAction())
         self.menubar.addAction(self.menuHelp.menuAction())
 
@@ -165,6 +168,7 @@ class Ui_MainWindow(object):
         self.actionSearchLyrics.setText(_translate("MainWindow", "Search Lyrics Cache", None))
         self.actionClearLyricsCache.setText(_translate("MainWindow", "Clear Lyrics Cache", None))
         self.actionPregenLyricsCache.setText(_translate("MainWindow", "Generate Lyrics Cache", None))
+        self.actionConvertOldCache.setText(_translate("MainWindow", "Convert old cache to new format", None))
 
 from PyQt4 import QtWebKit
 import icon_resource_rc
