@@ -200,7 +200,6 @@ p, li { white-space: pre-wrap; }
      <string>Help</string>
     </property>
     <addaction name="aboutMenuItem"/>
-    <addaction name="actionPreloadLyricsCache"/>
     <addaction name="actionConvertOldCache"/>
    </widget>
    <addaction name="menuFile"/>
@@ -219,11 +218,6 @@ p, li { white-space: pre-wrap; }
   <action name="actionOptions">
    <property name="text">
     <string>Options</string>
-   </property>
-  </action>
-  <action name="actionPreloadLyricsCache">
-   <property name="text">
-    <string>Load Lyrics Cache Into Memory</string>
    </property>
   </action>
   <action name="actionRefresh">

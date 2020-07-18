@@ -142,7 +142,8 @@ class searchJob(QtCore.QObject):
 
         results = self.cacheref.searchLyricsCache(searchedsong, searchedartist, searchedstring)
         for r in results:
-            artist, song, lyrics = self.cacheref.getSongArtistLyricsById(r[0])
+            song, artist = r
+            lyrics = self.cacheref.getLyrics(song, artist)
             if len(searchedstring) > 0 and searchedstring != "%":
                 replstring = searchedstring
                 if self.searchparams["exactMatch_SearchString"] == 0:

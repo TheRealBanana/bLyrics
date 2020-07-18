@@ -82,37 +82,50 @@ class LyricsCacher(object):
             with getDbCursor(DATABASE_PATH, 'w') as dbcursor:
                 #Lyrics table
                 dbcursor.execute("CREATE TABLE blyrics_data ("
-                                 "id INTEGER PRIMARY KEY AUTOINCREMENT,"
                                  "song TEXT,"
                                  "artist TEXT,"
                                  "failedtries INTEGER,"
-                                 "lyrics TEXT"
+                                 "lyrics TEXT,"
+                                 "PRIMARY KEY (song, artist)"
                                  ")")
             print "Created new lyrics database file."
             return True
 
-    def convertOldCache(self):
+    def convertOldCache(self, progressbar):
         cachefilelist = self.getLyricsFileList()
+        #Set up our progressbar
+        progressbar.progressBar.setMaximum(len(cachefilelist))
+        progressbar.progressLabel.setText("Converting old lyrics cache into new format...")
+        QObject.connect(progressbar.cancelButton, SIGNAL("clicked()"), self.cancelConvert)
+        progressbar.progressBar.setValue(0)
         print "Converting cached lyrics to new database format..."
+        songlistsize = len(cachefilelist)
         addnum = 0
-        for filename in cachefilelist:
+        self.cancel = False
+        for idx, filename in enumerate(cachefilelist):
+            if self.cancel:
+                break
+
             filepath = os.path.join(".", CACHEWRITEFOLDER, filename)
             #Decode the filename to get artist/song name
             b64part = filename[:-len(FILEEXTENSION)]
             decoded = urlsafe_b64decode(b64part)
             artist, song = re.split(BASE64SEP, decoded)
+
+            #nice place to update progressbar
+            progressbar.progressLabel.setText("Converting old cache into new format...\n(%s/%s) Found cached lyrics for: %s by %s" % (idx+1, songlistsize, song, artist))
+            progressbar.progressBar.setValue(idx+1)
+            QApplication.processEvents()
+
             lyrics = "Read error" #Probably unnecessary, we'll see
             with open(filepath, 'r') as f:
                 lyrics = f.read()
             #Write to db
-            try:
-                self.saveLyrics(song, artist, lyrics)
+            if self.saveLyrics(song, artist, lyrics, noupdate=True) is True:
                 addnum += 1
-            except sqlite3.IntegrityError:
-                #print "Tried to add duplicate lyrics for %s by %s. Skipping..." % (song, artist)
-                pass
-            #print "Converted cached lyrics for %s by %s" % (song, artist)
+
         print "Finished converting cache files. Successfully added %s new song lyrics out of %s cache files." % (addnum, len(cachefilelist))
+        return addnum, len(cachefilelist)
 
 
 
@@ -154,7 +167,7 @@ class LyricsCacher(object):
         if not isinstance(artist, unicode): artist = unicode(artist, "utf-8")
         if not isinstance(lyricsstring, unicode): lyrics = unicode(lyricsstring, "utf-8")
         with getDbCursor(DATABASE_PATH) as dbcursor:
-            results = dbcursor.execute("SELECT id FROM blyrics_data WHERE artist LIKE ? AND song LIKE ? AND lyrics LIKE ?", (artist, song, "%"+lyricsstring+"%")).fetchall()
+            results = dbcursor.execute("SELECT song, artist FROM blyrics_data WHERE artist LIKE ? AND song LIKE ? AND lyrics LIKE ?", (artist, song, "%"+lyricsstring+"%")).fetchall()
         return results
 
     def getSongArtistLyricsById(self, id_):
@@ -169,7 +182,7 @@ class LyricsCacher(object):
             data = dbcursor.execute("SELECT lyrics FROM blyrics_data where song=? AND artist=?", (song, artist)).fetchone()
         return data[0].replace("\n", "<br>")
 
-    def saveLyrics(self, song, artist, lyrics):
+    def saveLyrics(self, song, artist, lyrics, noupdate=False):
         if not isinstance(song, unicode): song = unicode(song, "utf-8")
         if not isinstance(artist, unicode): artist = unicode(artist, "utf-8")
         if not isinstance(lyrics, unicode): lyrics = unicode(lyrics, "utf-8")
@@ -184,8 +197,11 @@ class LyricsCacher(object):
             #Are we setting new lyrics or updating old ones?
             if self.checkSong(song, artist) is False:
                 dbcursor.execute("INSERT INTO blyrics_data VALUES (?,?,?,?)", (song, artist, 0, lyrics))
-            else:
+            elif noupdate is False:
                 dbcursor.execute("UPDATE blyrics_data SET lyrics=? WHERE song=? AND artist=?", (lyrics, song, artist))
+            else:
+                return False
+        return True
 
     def getCacheSize(self):
         with getDbCursor(DATABASE_PATH) as dbcursor:
@@ -202,39 +218,5 @@ class LyricsCacher(object):
         return len(filelist)
     """
 
-    def cancelPreload(self):
+    def cancelConvert(self):
         self.cancel = True
-
-    #Reading from the hdd is slow, even for an ssd. Might as well trade memory for speed.
-    def preloadLyricsCacheIntoMemory(self, progressbar_ui):
-        """
-        #Delete the old data
-        del self.cachedLyrics
-        self.cachedLyrics = {}
-        self.cancel = False
-        self.loadedIntoMem = False
-        filelist = self.getLyricsFileList()
-        totalsongs = len(filelist)
-        progressbar_ui.progressBar.setMaximum(totalsongs)
-        progressbar_ui.progressLabel.setText("Loading cache into memory...")
-        QObject.connect(progressbar_ui.cancelButton, SIGNAL("clicked()"), self.cancelPreload)
-        for idx, filename in enumerate(filelist):
-            if self.cancel is True:
-                print "Canceled loading cache into memory"
-                return
-
-            progressbar_ui.progressBar.setValue(idx)
-            QApplication.processEvents()
-
-            b64part = filename[:-len(FILEEXTENSION)]
-            decoded = urlsafe_b64decode(b64part)
-            artist, song = re.split(BASE64SEP, decoded)
-
-            if not self.cachedLyrics.has_key(artist):
-                self.cachedLyrics[artist] = {}
-            lyricsfilepath = os.path.join(CACHEWRITEFOLDER, filename)
-            with open(lyricsfilepath, 'r') as lyricsfile:
-                self.cachedLyrics[artist][song] = unicode(lyricsfile.read()).decode("utf8")
-        """
-        self.loadedIntoMem = True
-        print "Done loading cache into memory"

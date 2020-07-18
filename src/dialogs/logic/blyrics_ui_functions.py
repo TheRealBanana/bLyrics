@@ -67,7 +67,6 @@ class UIFunctions(object):
         self.last_song = None
         self.lyricsCache = LyricsCacher()
         self.lyricsProviders = lyricsProviders()
-#        self.lyricsCache.preloadLyricsCacheIntoMemory()
         self.lyricsDownloader = None
         self.lyricsDownloaderThread = None
         self.cacheBuilder = None
@@ -459,12 +458,15 @@ p, li { white-space: pre-wrap; }
     def areYouSureQuestion(self, title, message):
         return QtGui.QMessageBox.question(self.MainWindow, title, message, QtGui.QMessageBox.Yes, QtGui.QMessageBox.No)
 
+    #TODO FIXME
     def clearLyricsCacheAction(self):
+        print "WIP, ETA is TBD. El oh el."
+        """
         #U sure?
         if  self.areYouSureQuestion("Clear Lyrics Cache?", "<p align='center'>Are you sure you want to remove all %s cached lyrics?<br>(This cannot be undone)</p>" % self.lyricsCache.getCacheSize()) == QtGui.QMessageBox.Yes:
             numfiles = self.lyricsCache.clearLyricsCache()
             QtGui.QMessageBox.information(self.MainWindow, "Cached Cleared!", "Successfully cleared %s cached lyrics files!" % numfiles)
-            print "Removed %d cached lyrics" % numfiles
+            print "Removed %d cached lyrics" % numfiles"""
 
     def refreshLyricsButtonAction(self):
         self.last_song = None
@@ -529,7 +531,7 @@ p, li { white-space: pre-wrap; }
         message = "<p align='center'>Are you sure you want to download lyrics for all %s songs in the current playlist?<br><br>(This will take a while but can be canceled)</p>" % totalsongs
         if self.areYouSureQuestion(title, message) == QtGui.QMessageBox.No: return
 
-        widget = QtGui.QDialog(self.MainWindow)
+        widget = closableDialog(self.MainWindow)
         cachebuilderui = Ui_genericProgressDialog()
         cachebuilderui.setupUi(widget)
        # widget.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
@@ -540,16 +542,10 @@ p, li { white-space: pre-wrap; }
         if self.cacheBuilder is not None:
             del self.cacheBuilder
         self.cacheBuilder = CacheBuilder(songdata, cachebuilderui, self.lyricsCache, self.lyricsProviders)
+        QtCore.QObject.connect(widget, QtCore.SIGNAL("ClosableDialogClosing"), self.cacheBuilder.cancelBuild)
         self.cacheBuilder.startCacheGeneration()
 
     def searchLyricsAction(self):
-        #Cant search if we dont have our cache loaded so check that first
-        if self.lyricsCache.loadedIntoMem is False:
-            self.loadLyricsCacheIntoMemory()
-            if self.lyricsCache.loadedIntoMem is False: #User canceled build
-                QtGui.QMessageBox.critical(self.MainWindow, "Cache Load Canceled", "Cannot search lyrics without preloading lyrics into memory.", QtGui.QMessageBox.Ok)
-                return
-
         #Not sure if this is the right way to do it but I'm going with it for now
         if self.searchWidget is not None:
             self.searchWidget.deleteLater()
@@ -566,17 +562,6 @@ p, li { white-space: pre-wrap; }
         self.searchWidget.setWindowTitle("Search Lyrics Cache")
         searchdialog.searchButton.setFocus()
         self.searchWidget.show()
-
-    def loadLyricsCacheIntoMemory(self):
-        widget = closableDialog(self.MainWindow)
-        preloaderui = Ui_genericProgressDialog()
-        preloaderui.setupUi(widget)
-        QtCore.QObject.connect(widget, QtCore.SIGNAL("ClosableDialogClosing"), self.lyricsCache.cancelPreload)
-        widget.setWindowIcon(QtGui.QIcon(":/icon/bLyrics.ico"))
-        widget.setWindowTitle("Cache Preloading...")
-        widget.show()
-        self.lyricsCache.preloadLyricsCacheIntoMemory(preloaderui)
-        widget.close()
 
     def appInit(self):
         #Stuff we need to do when the app first launches
@@ -641,6 +626,22 @@ top: 2px;
         self.mainUI.refreshButtonDropMenu.addMenu(self.mainUI.providerListMenu)
         self.mainUI.RefreshLyricsButton.setMenu(self.mainUI.refreshButtonDropMenu)
 
+    def convertLyricsCacheDialog(self):
+        title = "Convert old lyrics cache?"
+        message = "Are you sure you want to convert your old lyrics cache to the new format? If your cache is large this could take a while."
+        if self.areYouSureQuestion(title, message) == QtGui.QMessageBox.Yes:
+            widget = closableDialog(self.MainWindow)
+            QtCore.QObject.connect(widget, QtCore.SIGNAL("ClosableDialogClosing"), self.lyricsCache.cancelConvert)
+            progressbar = Ui_genericProgressDialog()
+            progressbar.setupUi(widget)
+            widget.setWindowIcon(QtGui.QIcon(":/icon/bLyrics.ico"))
+            widget.setWindowTitle("Converting old cache files to new format...")
+            widget.setModal(True)
+            widget.show()
+            added, total = self.lyricsCache.convertOldCache(progressbar)
+            QtGui.QMessageBox.information(self.MainWindow, "Cache Conversion Complete", "Finished converting cache files. Successfully added %s new song lyrics out of %s cache files." % (added, total), QtGui.QMessageBox.Ok)
+            widget.close()
+
     def createCustomWorkThread(self, provider):
         self.createNewThreadWork(self.actual_song, self.actual_artist, customProvider=provider)
 
@@ -657,7 +658,6 @@ top: 2px;
         QtCore.QObject.connect(self.mainUI.actionClearLyricsCache, QtCore.SIGNAL(_fromUtf8("triggered()")), self.clearLyricsCacheAction)
         QtCore.QObject.connect(self.mainUI.actionPregenLyricsCache, QtCore.SIGNAL(_fromUtf8("triggered()")), self.pregenLyricsCache)
         QtCore.QObject.connect(self.mainUI.consoleO_ClearButton, QtCore.SIGNAL(_fromUtf8("clicked()")), self.clear_console)
-        QtCore.QObject.connect(self.mainUI.actionPreloadLyricsCache, QtCore.SIGNAL(_fromUtf8("triggered()")), self.loadLyricsCacheIntoMemory)
-        QtCore.QObject.connect(self.mainUI.actionConvertOldCache, QtCore.SIGNAL(_fromUtf8("triggered()")), self.lyricsCache.getCacheSize)
+        QtCore.QObject.connect(self.mainUI.actionConvertOldCache, QtCore.SIGNAL(_fromUtf8("triggered()")), self.convertLyricsCacheDialog)
 
         QtCore.QMetaObject.connectSlotsByName(mainWindow)
