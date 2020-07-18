@@ -123,10 +123,54 @@ class searchJob(QtCore.QObject):
     def startSearch(self):
         idx = 0
 
-        searchedsong = unicode(self.searchparams["song"]).encode("utf8")
-        searchedartist = unicode(self.searchparams["artist"]).encode("utf8")
-        searchedstring = unicode(self.searchparams["searchString"]).encode("utf8")
+        if isinstance(self.searchparams["song"], unicode): searchedsong = self.searchparams["song"]
+        else: searchedsong = unicode(self.searchparams["song"], "utf-8")
 
+        if isinstance(self.searchparams["artist"], unicode): searchedartist = self.searchparams["artist"]
+        else: searchedartist = unicode(self.searchparams["artist"], "utf-8")
+
+        if isinstance(self.searchparams["searchString"], unicode): searchedstring = self.searchparams["searchString"]
+        else: searchedstring = unicode(self.searchparams["searchString"], "utf-8")
+
+
+        if len(searchedartist) == 0:
+            searchedartist = "%"
+        if len(searchedsong) == 0:
+            searchedsong = "%"
+        if len(searchedstring) == 0:
+            searchedstring = "%"
+
+        results = self.cacheref.searchLyricsCache(searchedsong, searchedartist, searchedstring)
+        for r in results:
+            artist, song, lyrics = self.cacheref.getSongArtistLyricsById(r[0])
+            if len(searchedstring) > 0 and searchedstring != "%":
+                replstring = searchedstring
+                if self.searchparams["exactMatch_SearchString"] == 0:
+                    good_match = get_best_match(searchedstring, lyrics)
+                    if good_match[1] > MASTER_RATIO:
+                        replstring = good_match[0]
+                    else:
+                        idx += 1
+                        continue
+                elif searchedstring.lower() not in lyrics.lower():
+                    idx += 1
+                    continue
+
+                #Highlight our search string and fix line breaks
+                hledstring = START_HIGHLIGHT + replstring + END_HIGHLIGHT
+                lyrics = re.sub(re.escape(replstring), hledstring, lyrics, flags=re.I)
+            lyrics = re.sub("\n", "<br>", lyrics)
+            entrytitle = "%s by %s" % (unicode(song).decode("utf8"), unicode(artist).decode("utf8"))
+            listentryitem = QtGui.QListWidgetItem(entrytitle)
+            listentryitem.setData(QtCore.Qt.ToolTipRole, entrytitle)
+            listentryitem.setData(QtCore.Qt.UserRole, lyrics)
+            listwidgetref = self.pagereference.findChild(QtGui.QListWidget, "resultsListWidget")
+            listwidgetref.addItem(listentryitem)
+
+        #TODO HANDLE EXACT/INEXACT CHECKBOX
+
+
+        """
         for artist in self.cacheref.cachedLyrics:
             self.updateProgress(idx)
             if self.quitting is True:
@@ -181,7 +225,7 @@ class searchJob(QtCore.QObject):
                     lyrics = re.sub(re.escape(replstring), hledstring, lyrics, flags=re.I)
 
                 lyrics = re.sub("\n", "<br>", lyrics)
-
+                
                 #If we got this far we have a good match, lets add it to our page reference.
                 entrytitle = "%s by %s" % (unicode(song).decode("utf8"), unicode(artist).decode("utf8"))
                 listentryitem = QtGui.QListWidgetItem(entrytitle)
@@ -189,6 +233,7 @@ class searchJob(QtCore.QObject):
                 listentryitem.setData(QtCore.Qt.UserRole, lyrics)
                 listwidgetref = self.pagereference.findChild(QtGui.QListWidget, "resultsListWidget")
                 listwidgetref.addItem(listentryitem)
+                """
 
         self.emit(QtCore.SIGNAL("SearchFinished"))
 

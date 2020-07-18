@@ -49,8 +49,6 @@ class LyricsCacher(object):
     def __init__(self):
         if self.checkForLyricsDb() is False: self.disableCache()
         self.filelist = self.getLyricsFileList()
-        #Structure of cachedLyrics:
-        # cachedLyrics[artist_name][song_name]=lyrics
         self.cachedLyrics = None
         self.loadedIntoMem = False
         self.cancel = False
@@ -72,7 +70,7 @@ class LyricsCacher(object):
                 except sqlite3.DatabaseError:
                     return False
             #Make sure this is our database
-            if table_list[0] != "blyrics_data":
+            if table_list is None or table_list[0] != "blyrics_data":
                 return False
             else:
                 return True
@@ -84,11 +82,11 @@ class LyricsCacher(object):
             with getDbCursor(DATABASE_PATH, 'w') as dbcursor:
                 #Lyrics table
                 dbcursor.execute("CREATE TABLE blyrics_data ("
+                                 "id INTEGER PRIMARY KEY AUTOINCREMENT,"
                                  "song TEXT,"
                                  "artist TEXT,"
                                  "failedtries INTEGER,"
-                                 "lyrics TEXT,"
-                                 "PRIMARY KEY(song, artist)"
+                                 "lyrics TEXT"
                                  ")")
             print "Created new lyrics database file."
             return True
@@ -148,8 +146,21 @@ class LyricsCacher(object):
         if not isinstance(song, unicode): song = unicode(song, "utf-8")
         if not isinstance(artist, unicode): artist = unicode(artist, "utf-8")
         with getDbCursor(DATABASE_PATH) as dbcursor:
-            data = dbcursor.execute("SELECT COUNT(1) from blyrics_data where song=? and artist=?", (song, artist)).fetchone()
+            data = dbcursor.execute("SELECT COUNT(1) FROM blyrics_data WHERE song=? AND artist=?", (song, artist)).fetchone()
         return bool(data[0])
+
+    def searchLyricsCache(self, song, artist, lyricsstring):
+        if not isinstance(song, unicode): song = unicode(song, "utf-8")
+        if not isinstance(artist, unicode): artist = unicode(artist, "utf-8")
+        if not isinstance(lyricsstring, unicode): lyrics = unicode(lyricsstring, "utf-8")
+        with getDbCursor(DATABASE_PATH) as dbcursor:
+            results = dbcursor.execute("SELECT id FROM blyrics_data WHERE artist LIKE ? AND song LIKE ? AND lyrics LIKE ?", (artist, song, "%"+lyricsstring+"%")).fetchall()
+        return results
+
+    def getSongArtistLyricsById(self, id_):
+        with getDbCursor(DATABASE_PATH) as dbcursor:
+            result = dbcursor.execute("SELECT artist, song, lyrics FROM blyrics_data WHERE id=?", (id_,)).fetchone()
+        return result
 
     def getLyrics(self, song, artist):
         if not isinstance(song, unicode): song = unicode(song, "utf-8")
@@ -168,9 +179,6 @@ class LyricsCacher(object):
             lyrics = HTMLBREAKREGEX.sub("", lyrics)
         else:
             lyrics = HTMLBREAKREGEX.sub(os.linesep, lyrics)
-        try:
-            lyrics = unicode(lyrics).encode("utf8")
-        except: pass
 
         with getDbCursor(DATABASE_PATH, 'w') as dbcursor:
             #Are we setting new lyrics or updating old ones?
