@@ -47,6 +47,7 @@ class getDbCursor(object):
 
 class LyricsCacher(object):
     def __init__(self):
+        self.dbopen = False
         if self.checkForLyricsDb() is False: self.disableCache()
         self.filelist = self.getLyricsFileList()
         self.cachedLyrics = None
@@ -55,8 +56,7 @@ class LyricsCacher(object):
 
     #Been a while since ive done any db stuff so its all a bit rusty. Im trying to only have the db open while an
     #operation is happening. That means lots of duplicate code but meh.
-    @staticmethod
-    def checkForLyricsDb():
+    def checkForLyricsDb(self):
         #Check if we have a folder and if not create it
         if os.access(CACHEWRITEFOLDER, os.F_OK) is False:
             try:
@@ -65,6 +65,7 @@ class LyricsCacher(object):
                 return False
         #Now see if we have a database file and if not create a new one
         if os.access(DATABASE_PATH, os.W_OK):
+            if self.dbopen is True: return False
             with getDbCursor(DATABASE_PATH) as dbcursor:
                 try:
                     table_list = dbcursor.execute("SELECT name FROM sqlite_master where type='table' ORDER BY name").fetchone()
@@ -79,7 +80,7 @@ class LyricsCacher(object):
         else:
             # No database file exists so we are going to create it and try and
             # populate it with old-style cache file if they exist.
-
+            if self.dbopen is True: return False
             with getDbCursor(DATABASE_PATH, 'w') as dbcursor:
                 #Lyrics table
                 dbcursor.execute("CREATE TABLE blyrics_data ("
@@ -103,32 +104,46 @@ class LyricsCacher(object):
         songlistsize = len(cachefilelist)
         addnum = 0
         self.cancel = False
-        for idx, filename in enumerate(cachefilelist):
-            if self.cancel:
-                break
+        #We're going to be keeping the database open the entire time for performance reasons. Its an order of magnitude
+        #slower to constantly open and close the database when we want to write.
+        if self.dbopen is True: return False
+        self.dbopen = True
+        with getDbCursor(DATABASE_PATH, "w") as dbcursor:
+            for idx, filename in enumerate(cachefilelist):
+                if self.cancel:
+                    break
 
-            filepath = os.path.join(".", CACHEWRITEFOLDER, filename)
-            #Decode the filename to get artist/song name
-            b64part = filename[:-len(FILEEXTENSION)]
-            decoded = urlsafe_b64decode(b64part)
-            artist, song = re.split(BASE64SEP, decoded)
+                filepath = os.path.join(".", CACHEWRITEFOLDER, filename)
+                #Decode the filename to get artist/song name
+                b64part = filename[:-len(FILEEXTENSION)]
+                decoded = urlsafe_b64decode(b64part)
+                artist, song = re.split(BASE64SEP, decoded)
 
-            #nice place to update progressbar
-            progressbar.progressLabel.setText("Converting old cache into new format...\n(%s/%s) Found cached lyrics for: %s by %s" % (idx+1, songlistsize, song, artist))
-            progressbar.progressBar.setValue(idx+1)
-            QApplication.processEvents()
+                #nice place to update progressbar
+                progressbar.progressLabel.setText("Converting old cache into new format...\n(%s/%s) Found cached lyrics for: %s by %s" % (idx+1, songlistsize, song, artist))
+                progressbar.progressBar.setValue(idx+1)
+                QApplication.processEvents()
 
-            with open(filepath, 'r') as f:
-                lyrics = f.read()
-            #Write to db
-            if self.saveLyrics(song, artist, lyrics, noupdate=True) is True:
-                addnum += 1
+                with open(filepath, 'r') as f:
+                    lyrics = f.read()
+                #Write to db. This is a copy of the saveLyrics code but instead of constantly opening and closing the
+                #database we are keeping it open the whole processes.
+                if not isinstance(song, unicode): song = unicode(song, "utf-8")
+                if not isinstance(artist, unicode): artist = unicode(artist, "utf-8")
+                if not isinstance(lyrics, unicode): lyrics = unicode(lyrics, "utf-8")
+                if len(lyrics.splitlines()) > 1:
+                    #Looks like we have newlines already, remove any br's and hope it looks fine
+                    lyrics = HTMLBREAKREGEX.sub("", lyrics)
+                else:
+                    lyrics = HTMLBREAKREGEX.sub(os.linesep, lyrics)
+                #Don't add anything already in the database
+                if bool(dbcursor.execute("SELECT COUNT(1) FROM blyrics_data WHERE song=? AND artist=?", (song, artist)).fetchone()[0]) is False:
+                    dbcursor.execute("INSERT INTO blyrics_data VALUES (?,?,?,?)", (song, artist, 0, lyrics))
+                    addnum += 1
 
+        self.dbopen = False
         print "Finished converting cache files. Added %s new song lyrics out of %s cache files." % (addnum, len(cachefilelist))
         return addnum, len(cachefilelist)
-
-
-
 
     @staticmethod
     def getCachefileName(song, artist):
@@ -155,29 +170,28 @@ class LyricsCacher(object):
 
     #For now this is exact matching now. Later we may use the b64decode()'d string
     #with SequenceMatcher to check for almost matches. Not sure yet.
-    @staticmethod
-    def checkSong(song, artist):
+    def checkSong(self, song, artist):
         #Cause python2 we have to do some unicode handling
         if not isinstance(song, unicode): song = unicode(song, "utf-8")
         if not isinstance(artist, unicode): artist = unicode(artist, "utf-8")
+        if self.dbopen is True: return False
         with getDbCursor(DATABASE_PATH) as dbcursor:
             data = dbcursor.execute("SELECT COUNT(1) FROM blyrics_data WHERE song=? AND artist=?", (song, artist)).fetchone()
         return bool(data[0])
 
-    @staticmethod
-    def searchLyricsCache(song, artist, lyricsstring):
+    def searchLyricsCache(self, song, artist, lyricsstring):
         if not isinstance(song, unicode): song = unicode(song, "utf-8")
         if not isinstance(artist, unicode): artist = unicode(artist, "utf-8")
         if not isinstance(lyricsstring, unicode): lyricsstring = unicode(lyricsstring, "utf-8")
-
+        if self.dbopen is True: return False
         with getDbCursor(DATABASE_PATH) as dbcursor:
             results = dbcursor.execute("SELECT song, artist FROM blyrics_data WHERE artist LIKE ? AND song LIKE ? AND lyrics LIKE ?", (artist, song, lyricsstring)).fetchall()
         return results
 
-    @staticmethod
-    def getLyrics(song, artist):
+    def getLyrics(self, song, artist):
         if not isinstance(song, unicode): song = unicode(song, "utf-8")
         if not isinstance(artist, unicode): artist = unicode(artist, "utf-8")
+        if self.dbopen is True: return False
         with getDbCursor(DATABASE_PATH) as dbcursor:
             data = dbcursor.execute("SELECT lyrics FROM blyrics_data where song=? AND artist=?", (song, artist)).fetchone()
         return data[0].replace("\n", "<br>")
@@ -192,7 +206,7 @@ class LyricsCacher(object):
             lyrics = HTMLBREAKREGEX.sub("", lyrics)
         else:
             lyrics = HTMLBREAKREGEX.sub(os.linesep, lyrics)
-
+        if self.dbopen is True: return False
         with getDbCursor(DATABASE_PATH, 'w') as dbcursor:
             #Are we setting new lyrics or updating old ones?
             if self.checkSong(song, artist) is False:
@@ -203,21 +217,20 @@ class LyricsCacher(object):
                 return False
         return True
 
-    @staticmethod
-    def getCacheSize():
+    def getCacheSize(self):
+        if self.dbopen is True: return False
         with getDbCursor(DATABASE_PATH) as dbcursor:
             data = dbcursor.execute("SELECT COUNT(*) FROM blyrics_data").fetchone()
         return data[0]
 
-    #TODO FIXME
-    """
     def clearLyricsCache(self):
         print "Clearing Lyrics Cache..."
-        filelist = self.getLyricsFileList()
-        for f in filelist: # Dangerous, only remove blyrics.txt files.
-            os.remove(os.path.join(CACHEWRITEFOLDER, f))
-        return len(filelist)
-    """
+        cachesize = self.getCacheSize()
+        if self.dbopen is True: return False
+        with getDbCursor(DATABASE_PATH, "w") as dbcursor:
+            dbcursor.execute("DELETE FROM blyrics_data")
+            dbcursor.execute("VACUUM")
+        return cachesize
 
     def cancelConvert(self):
         self.cancel = True

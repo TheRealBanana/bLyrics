@@ -60,6 +60,7 @@ class threadedLyricsDownloader(QObject):
         self.emit(SIGNAL("lyricsUpdate"), lyrics, providername)
         self.emit(SIGNAL("workFinished()"))
 
+    #TODO Implement checking of failedtries for lyrics to stop fetching instrumental/lyric-less songs.
     def getUpdatedLyrics(self):
         #Are we being asked to retrieve from a specific source only?
         if self.customProvider is not None:

@@ -6,7 +6,7 @@
 #
 # WARNING! All changes made in this file will be lost!
 
-VERSION_STRING = "2.13"
+VERSION_STRING = "2.14a1"
 
 from PyQt4 import QtCore, QtGui
 

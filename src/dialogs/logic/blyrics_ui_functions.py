@@ -460,13 +460,11 @@ p, li { white-space: pre-wrap; }
 
     #TODO FIXME
     def clearLyricsCacheAction(self):
-        print "WIP, ETA is TBD. El oh el."
-        """
         #U sure?
         if  self.areYouSureQuestion("Clear Lyrics Cache?", "<p align='center'>Are you sure you want to remove all %s cached lyrics?<br>(This cannot be undone)</p>" % self.lyricsCache.getCacheSize()) == QtGui.QMessageBox.Yes:
-            numfiles = self.lyricsCache.clearLyricsCache()
-            QtGui.QMessageBox.information(self.MainWindow, "Cached Cleared!", "Successfully cleared %s cached lyrics files!" % numfiles)
-            print "Removed %d cached lyrics" % numfiles"""
+            clearedcachesize = self.lyricsCache.clearLyricsCache()
+            QtGui.QMessageBox.information(self.MainWindow, "Cached Cleared!", "Successfully cleared %s cached lyrics files!" % clearedcachesize)
+            print "Removed %d cached lyrics" % clearedcachesize
 
     def refreshLyricsButtonAction(self):
         self.last_song = None
