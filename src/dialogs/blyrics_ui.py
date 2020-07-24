@@ -121,8 +121,9 @@ class Ui_MainWindow(object):
         self.menuFile.addAction(self.actionPregenLyricsCache)
         self.menuFile.addSeparator()
         self.menuFile.addAction(self.actionQuit)
-        self.menuHelp.addAction(self.aboutMenuItem)
         self.menuHelp.addAction(self.actionConvertOldCache)
+        self.menuHelp.addSeparator()
+        self.menuHelp.addAction(self.aboutMenuItem)
         self.menubar.addAction(self.menuFile.menuAction())
         self.menubar.addAction(self.menuHelp.menuAction())
 

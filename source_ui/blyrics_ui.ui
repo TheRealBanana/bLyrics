@@ -199,8 +199,9 @@ p, li { white-space: pre-wrap; }
     <property name="title">
      <string>Help</string>
     </property>
-    <addaction name="aboutMenuItem"/>
     <addaction name="actionConvertOldCache"/>
+    <addaction name="separator"/>
+    <addaction name="aboutMenuItem"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuHelp"/>

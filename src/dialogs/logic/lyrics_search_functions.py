@@ -1,4 +1,3 @@
-import os.path
 from PyQt4 import QtCore, QtGui
 from difflib import SequenceMatcher
 import re
@@ -8,9 +7,6 @@ START_HIGHLIGHT = '<span style="background-color: #FFFF00">'
 END_HIGHLIGHT = "</span>"
 #START_HIGHLIGHT = "<b>"
 #END_HIGHLIGHT = "</b>"
-
-
-
 
 
 #This function is just superb and I know I couldn't do any better.
@@ -116,34 +112,53 @@ class searchJob(QtCore.QObject):
         self.quitting = False
         super(searchJob, self).__init__()
 
-    def updateProgress(self, idx):
-        self.emit(QtCore.SIGNAL("SearchCountUpdate"), idx)
+    def updateProgress(self, idx, total):
+        self.emit(QtCore.SIGNAL("SearchCountUpdate"), idx, total)
         QtGui.QApplication.processEvents()
 
     def startSearch(self):
-        idx = 0
+        # Make sure we're dealing with unicode.
+        if not isinstance(self.searchparams["song"], unicode): self.searchparams["song"] = unicode(self.searchparams["song"], "utf-8")
+        if not isinstance(self.searchparams["artist"], unicode): self.searchparams["artist"] = unicode(self.searchparams["artist"], "utf-8")
+        if not isinstance(self.searchparams["searchString"], unicode): self.searchparams["searchString"] = unicode(self.searchparams["searchString"], "utf-8")
+        searchedsong = self.searchparams["song"]
+        searchedartist = self.searchparams["artist"]
+        searchedstring = self.searchparams["searchString"]
 
-        if isinstance(self.searchparams["song"], unicode): searchedsong = self.searchparams["song"]
-        else: searchedsong = unicode(self.searchparams["song"], "utf-8")
-
-        if isinstance(self.searchparams["artist"], unicode): searchedartist = self.searchparams["artist"]
-        else: searchedartist = unicode(self.searchparams["artist"], "utf-8")
-
-        if isinstance(self.searchparams["searchString"], unicode): searchedstring = self.searchparams["searchString"]
-        else: searchedstring = unicode(self.searchparams["searchString"], "utf-8")
-
-
-        if len(searchedartist) == 0:
+        #Any unchecked exact checkbox means we have to pull all entries for that field (set query to %).
+        #Anything exact we still pad with wildcards just to be sure
+        if self.searchparams["exactMatch_Artist"] == 0 or len(searchedartist) == 0:
             searchedartist = "%"
-        if len(searchedsong) == 0:
+        else:
+            searchedartist = "%%%s%%" % searchedartist
+        if self.searchparams["exactMatch_Song"] == 0 or len(searchedsong) == 0:
             searchedsong = "%"
-        if len(searchedstring) == 0:
+        else:
+            searchedsong = "%%%s%%" % searchedsong
+        if self.searchparams["exactMatch_SearchString"] == 0 or len(searchedstring) == 0:
             searchedstring = "%"
+        else:
+            searchedstring = "%%%s%%" % searchedstring
 
         results = self.cacheref.searchLyricsCache(searchedsong, searchedartist, searchedstring)
-        for r in results:
+        #Swap anything we changed back for further filtering below
+        searchedsong = self.searchparams["song"]
+        searchedartist = self.searchparams["artist"]
+        searchedstring = self.searchparams["searchString"]
+
+        total = len(results)
+        for idx, r in enumerate(results):
+            self.updateProgress(idx, total)
+            if self.quitting is True:
+                break
             song, artist = r
             lyrics = self.cacheref.getLyrics(song, artist)
+            #Inexact searching for artist and song
+            if searchedartist.lower() not in artist.lower() and SequenceMatcher(None, searchedartist.lower(), artist.lower()).ratio() < MASTER_RATIO:
+                continue
+            if searchedsong.lower() not in song.lower() and SequenceMatcher(None, searchedsong.lower(), song.lower()).ratio() < MASTER_RATIO:
+                continue
+
             if len(searchedstring) > 0 and searchedstring != "%":
                 replstring = searchedstring
                 if self.searchparams["exactMatch_SearchString"] == 0:
@@ -151,15 +166,14 @@ class searchJob(QtCore.QObject):
                     if good_match[1] > MASTER_RATIO:
                         replstring = good_match[0]
                     else:
-                        idx += 1
                         continue
                 elif searchedstring.lower() not in lyrics.lower():
-                    idx += 1
                     continue
 
                 #Highlight our search string and fix line breaks
                 hledstring = START_HIGHLIGHT + replstring + END_HIGHLIGHT
                 lyrics = re.sub(re.escape(replstring), hledstring, lyrics, flags=re.I)
+
             lyrics = re.sub("\n", "<br>", lyrics)
             entrytitle = "%s by %s" % (unicode(song).decode("utf8"), unicode(artist).decode("utf8"))
             listentryitem = QtGui.QListWidgetItem(entrytitle)
@@ -167,74 +181,6 @@ class searchJob(QtCore.QObject):
             listentryitem.setData(QtCore.Qt.UserRole, lyrics)
             listwidgetref = self.pagereference.findChild(QtGui.QListWidget, "resultsListWidget")
             listwidgetref.addItem(listentryitem)
-
-        #TODO HANDLE EXACT/INEXACT CHECKBOX
-
-
-        """
-        for artist in self.cacheref.cachedLyrics:
-            self.updateProgress(idx)
-            if self.quitting is True:
-                break
-
-            if len(searchedartist) > 0:
-                if self.searchparams["exactMatch_Artist"] == 1:
-                    if searchedartist.lower() != artist.lower():
-                        idx += len(self.cacheref.cachedLyrics[artist])
-                        continue
-                elif searchedartist.lower() not in artist.lower() and SequenceMatcher(None, searchedartist.lower(), artist.lower()).ratio() < MASTER_RATIO:
-                    idx += len(self.cacheref.cachedLyrics[artist])
-                    continue
-
-            for song in self.cacheref.cachedLyrics[artist]:
-                self.updateProgress(idx)
-                if self.quitting is True:
-                    break
-
-
-                if len(searchedsong) > 0:
-                    if self.searchparams["exactMatch_Song"] == 1:
-                        if searchedsong.lower() != song.lower():
-                            idx += 1
-                            continue
-                    elif searchedsong.lower() not in song.lower() and SequenceMatcher(None, searchedsong.lower(), song.lower()).ratio() < MASTER_RATIO:
-                        idx += 1
-                        continue
-
-
-                #If we got this far that means our song/artist must have either matched or werent included.
-                #We need to load the lyrics for this song. If we have a searchString in our search params will
-                #test for that now. If we don't, we just add this to the results.
-                lyrics = self.cacheref.cachedLyrics[artist][song]
-                #Match our substring, going with exact matches cause using our SequenceMatcher against every single word
-                #in the lyrics sounds like a very bad idea but we may investigate it later if required.
-                if len(searchedstring) > 0:
-                    replstring = searchedstring
-                    if self.searchparams["exactMatch_SearchString"] == 0:
-                        good_match = get_best_match(searchedstring, lyrics)
-                        if good_match[1] > MASTER_RATIO:
-                            replstring = good_match[0]
-                        else:
-                            idx += 1
-                            continue
-                    elif searchedstring.lower() not in lyrics.lower():
-                            idx += 1
-                            continue
-
-                    #Highlight our search string and fix line breaks
-                    hledstring = START_HIGHLIGHT + replstring + END_HIGHLIGHT
-                    lyrics = re.sub(re.escape(replstring), hledstring, lyrics, flags=re.I)
-
-                lyrics = re.sub("\n", "<br>", lyrics)
-                
-                #If we got this far we have a good match, lets add it to our page reference.
-                entrytitle = "%s by %s" % (unicode(song).decode("utf8"), unicode(artist).decode("utf8"))
-                listentryitem = QtGui.QListWidgetItem(entrytitle)
-                listentryitem.setData(QtCore.Qt.ToolTipRole, entrytitle)
-                listentryitem.setData(QtCore.Qt.UserRole, lyrics)
-                listwidgetref = self.pagereference.findChild(QtGui.QListWidget, "resultsListWidget")
-                listwidgetref.addItem(listentryitem)
-                """
 
         self.emit(QtCore.SIGNAL("SearchFinished"))
 
@@ -255,8 +201,8 @@ class lyricsSearchFunctions(object):
         QtCore.QObject.connect(self.searchDialog.leftTabWidget_Results, QtCore.SIGNAL("tabCloseRequested(int)"), self.closeTab)
         self.searchDialog.searchButton.setText("Search Lyrics Cache (%s)" % self.cachesize)
 
-    def searchCountUpdate(self, n):
-        self.searchDialog.searchButton.setText("Cancel Search  -  %s/%s" % (n, self.cachesize))
+    def searchCountUpdate(self, n, total):
+        self.searchDialog.searchButton.setText("Cancel Search  -  %s/%s" % (n, total))
 
     def searchJobFinished(self):
         if self.searchThread is not None:
@@ -315,7 +261,7 @@ class lyricsSearchFunctions(object):
         #Swap our search button to a cancel button
         QtCore.QObject.disconnect(self.searchDialog.searchButton, QtCore.SIGNAL("clicked()"), self.searchButtonClicked)
         QtCore.QObject.connect(self.searchDialog.searchButton, QtCore.SIGNAL("clicked()"), self.searchJobFinished)
-        self.searchDialog.searchButton.setText("Cancel Search  -  0/%s" % self.cachesize)
+        self.searchDialog.searchButton.setText("Cancel Search  -  0/0")
         self.setInputEnabledState(False)
 
 

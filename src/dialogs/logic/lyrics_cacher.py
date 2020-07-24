@@ -55,7 +55,8 @@ class LyricsCacher(object):
 
     #Been a while since ive done any db stuff so its all a bit rusty. Im trying to only have the db open while an
     #operation is happening. That means lots of duplicate code but meh.
-    def checkForLyricsDb(self):
+    @staticmethod
+    def checkForLyricsDb():
         #Check if we have a folder and if not create it
         if os.access(CACHEWRITEFOLDER, os.F_OK) is False:
             try:
@@ -117,14 +118,13 @@ class LyricsCacher(object):
             progressbar.progressBar.setValue(idx+1)
             QApplication.processEvents()
 
-            lyrics = "Read error" #Probably unnecessary, we'll see
             with open(filepath, 'r') as f:
                 lyrics = f.read()
             #Write to db
             if self.saveLyrics(song, artist, lyrics, noupdate=True) is True:
                 addnum += 1
 
-        print "Finished converting cache files. Successfully added %s new song lyrics out of %s cache files." % (addnum, len(cachefilelist))
+        print "Finished converting cache files. Added %s new song lyrics out of %s cache files." % (addnum, len(cachefilelist))
         return addnum, len(cachefilelist)
 
 
@@ -146,7 +146,8 @@ class LyricsCacher(object):
         self.getLyrics = self.noCacheForYou
         self.searchLyrics = self.noCacheForYou
 
-    def getLyricsFileList(self):
+    @staticmethod
+    def getLyricsFileList():
         #Only our cache files
         return [f for f in os.listdir(CACHEWRITEFOLDER) if
                 (os.path.isfile(os.path.join(CACHEWRITEFOLDER, f)) is True and
@@ -154,7 +155,8 @@ class LyricsCacher(object):
 
     #For now this is exact matching now. Later we may use the b64decode()'d string
     #with SequenceMatcher to check for almost matches. Not sure yet.
-    def checkSong(self, song, artist):
+    @staticmethod
+    def checkSong(song, artist):
         #Cause python2 we have to do some unicode handling
         if not isinstance(song, unicode): song = unicode(song, "utf-8")
         if not isinstance(artist, unicode): artist = unicode(artist, "utf-8")
@@ -162,20 +164,18 @@ class LyricsCacher(object):
             data = dbcursor.execute("SELECT COUNT(1) FROM blyrics_data WHERE song=? AND artist=?", (song, artist)).fetchone()
         return bool(data[0])
 
-    def searchLyricsCache(self, song, artist, lyricsstring):
+    @staticmethod
+    def searchLyricsCache(song, artist, lyricsstring):
         if not isinstance(song, unicode): song = unicode(song, "utf-8")
         if not isinstance(artist, unicode): artist = unicode(artist, "utf-8")
-        if not isinstance(lyricsstring, unicode): lyrics = unicode(lyricsstring, "utf-8")
+        if not isinstance(lyricsstring, unicode): lyricsstring = unicode(lyricsstring, "utf-8")
+
         with getDbCursor(DATABASE_PATH) as dbcursor:
-            results = dbcursor.execute("SELECT song, artist FROM blyrics_data WHERE artist LIKE ? AND song LIKE ? AND lyrics LIKE ?", (artist, song, "%"+lyricsstring+"%")).fetchall()
+            results = dbcursor.execute("SELECT song, artist FROM blyrics_data WHERE artist LIKE ? AND song LIKE ? AND lyrics LIKE ?", (artist, song, lyricsstring)).fetchall()
         return results
 
-    def getSongArtistLyricsById(self, id_):
-        with getDbCursor(DATABASE_PATH) as dbcursor:
-            result = dbcursor.execute("SELECT artist, song, lyrics FROM blyrics_data WHERE id=?", (id_,)).fetchone()
-        return result
-
-    def getLyrics(self, song, artist):
+    @staticmethod
+    def getLyrics(song, artist):
         if not isinstance(song, unicode): song = unicode(song, "utf-8")
         if not isinstance(artist, unicode): artist = unicode(artist, "utf-8")
         with getDbCursor(DATABASE_PATH) as dbcursor:
@@ -203,7 +203,8 @@ class LyricsCacher(object):
                 return False
         return True
 
-    def getCacheSize(self):
+    @staticmethod
+    def getCacheSize():
         with getDbCursor(DATABASE_PATH) as dbcursor:
             data = dbcursor.execute("SELECT COUNT(*) FROM blyrics_data").fetchone()
         return data[0]
