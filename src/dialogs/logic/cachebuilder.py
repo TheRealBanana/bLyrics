@@ -71,7 +71,6 @@ class CacheBuilder(object):
         self.totalsongs = len(songdata["playlist"])
         self.songdata = songdata
         self.dialog = QApplication.activeWindow().window()
-        QtCore.QObject.connect(progressbar_widget.cancelButton, QtCore.SIGNAL("clicked()"), self.cancelBuild)
 
     def cancelBuild(self):
         self.killThread()

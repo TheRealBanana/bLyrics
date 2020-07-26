@@ -2,9 +2,8 @@ How to compile:
 
 You must first have the following packages installed:
 
-1) Python 2.6 or 2.7 (CANNOT BE THE 3.x BRANCH OR ANYTHING LOWER THAN 2.6)
+1) Python 2.7 (CANNOT BE THE 3.x BRANCH OR ANYTHING LOWER THAN 2.7)
 2) PyQt4, latest version in the 4 branch if you can
-3) Suds (Python SOAP interface module)
 4) PyWin32 (for the win32com package)
 5) PyInstaller (to compile to exe)
 

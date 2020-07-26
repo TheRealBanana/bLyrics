@@ -540,6 +540,7 @@ p, li { white-space: pre-wrap; }
         if self.cacheBuilder is not None:
             del self.cacheBuilder
         self.cacheBuilder = CacheBuilder(songdata, cachebuilderui, self.lyricsCache, self.lyricsProviders)
+        QtCore.QObject.connect(cachebuilderui.cancelButton, QtCore.SIGNAL("clicked()"), self.cacheBuilder.cancelBuild)
         QtCore.QObject.connect(widget, QtCore.SIGNAL("ClosableDialogClosing"), self.cacheBuilder.cancelBuild)
         self.cacheBuilder.startCacheGeneration()
 
@@ -553,6 +554,10 @@ p, li { white-space: pre-wrap; }
         searchdialog = Ui_lyricsSearchDialog()
         searchdialog.setupUi(self.searchWidget)
         self.searchfunctionsinstance = lyricsSearchFunctions(searchdialog, self.lyricsCache)
+        #Make sure the library is loaded otherwise dont show the search dialog
+        #I hate this code. Having to reach two levels deep to check something is not right
+        if self.searchfunctionsinstance.lyricsCacherRef.librarydict is None:
+            return
         if _ALWAYS_ON_TOP_:
             self.searchWidget.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
         QtCore.QObject.connect(self.searchWidget, QtCore.SIGNAL("ClosableDialogClosing"), self.searchfunctionsinstance.closeDialog)

@@ -195,16 +195,46 @@ class lyricsSearchFunctions(object):
         self.cachesize = str(self.lyricsCacherRef.getCacheSize())
         self.querynumber = 0
         self.setupConnections()
+        self.initLibraryTab()
 
     def setupConnections(self):
         QtCore.QObject.connect(self.searchDialog.searchButton, QtCore.SIGNAL("clicked()"), self.searchButtonClicked)
         QtCore.QObject.connect(self.searchDialog.leftTabWidget_Results, QtCore.SIGNAL("tabCloseRequested(int)"), self.closeTab)
         self.searchDialog.searchButton.setText("Search Lyrics Cache (%s)" % self.cachesize)
 
+    def initLibraryTab(self):
+        library = self.lyricsCacherRef.getLibraryDict()
+        if library is None:
+            return False
+        newtab = QtGui.QWidget()
+        verticallayout = QtGui.QVBoxLayout(newtab)
+        treeWidget = QtGui.QTreeWidget(newtab)
+        treeWidget.setHeaderLabel("Lyrics Cache")
+        verticallayout.addWidget(treeWidget)
+        self.searchDialog.leftTabWidget_Results.addTab(newtab, "Library (%s)" % self.cachesize)
+        #Hide the tab's close button. We want this tab to be permanent.
+        self.searchDialog.leftTabWidget_Results.tabBar().tabButton(0, QtGui.QTabBar.RightSide).resize(0,0)
+        QtCore.QObject.connect(treeWidget, QtCore.SIGNAL("itemClicked(QTreeWidgetItem*, int)"), self.treeItemClicked)
+        artists = library.keys()
+        artists.sort()
+        for a in artists:
+            artist_item = QtGui.QTreeWidgetItem(treeWidget)
+            artist_item.setText(0, a)
+            for song in library[a]:
+                song_item = QtGui.QTreeWidgetItem(artist_item)
+                song_item.setText(0, song)
+                song_item.setData(0, QtCore.Qt.UserRole, library[a][song])
+
     def searchCountUpdate(self, n, total):
         self.searchDialog.searchButton.setText("Cancel Search  -  %s/%s" % (n, total))
+        tabidx = self.searchDialog.leftTabWidget_Results.indexOf(self.activeSearchJobWidget)
+        tabtext = unicode(self.searchDialog.leftTabWidget_Results.tabText(tabidx), "utf-8")
+        endbracketidx = tabtext.index("]")
+        listwidgetref = self.activeSearchJobWidget.findChild(QtGui.QListWidget, "resultsListWidget")
+        self.searchDialog.leftTabWidget_Results.setTabText(tabidx, "[%s]" % str(listwidgetref.count()) + tabtext[endbracketidx+1:])
 
-    def searchJobFinished(self):
+
+    def killActiveSearchThread(self):
         if self.searchThread is not None:
             self.searchJobTask.quitting = True
             self.searchThread.quit()
@@ -219,18 +249,25 @@ class lyricsSearchFunctions(object):
         QtCore.QObject.connect(self.searchDialog.searchButton, QtCore.SIGNAL("clicked()"), self.searchButtonClicked)
         self.searchDialog.searchButton.setText("Search Lyrics Cache (%s)" % self.cachesize)
         self.setInputEnabledState(True)
+
+    def searchJobFinished(self):
+        self.killActiveSearchThread()
         #Update tab text with the number of search results.
-        #Make sure we have a tab to set text to. This function is also called on exit and its possible to have no tabs.
-        if self.searchDialog.leftTabWidget_Results.count() > 0:
-            curtabidx = self.searchDialog.leftTabWidget_Results.count()-1
-            self.searchDialog.leftTabWidget_Results.setCurrentIndex(curtabidx)
-            tabtext = unicode(self.searchDialog.leftTabWidget_Results.tabText(curtabidx)).encode("utf8")
-            endbracketidx = tabtext.index("]")
-            listwidgetref = self.searchDialog.leftTabWidget_Results.currentWidget().findChild(QtGui.QListWidget, "resultsListWidget")
-            self.searchDialog.leftTabWidget_Results.setTabText(curtabidx, "[%s]" % str(listwidgetref.count()) + tabtext[endbracketidx+1:])
+        #No need to check if we have a tab to set to since we now always have a library tab
+        curtabidx = self.searchDialog.leftTabWidget_Results.count()-1
+        self.searchDialog.leftTabWidget_Results.setCurrentIndex(curtabidx)
+        tabtext = unicode(self.searchDialog.leftTabWidget_Results.tabText(curtabidx)).encode("utf8")
+        endbracketidx = tabtext.index("]")
+        listwidgetref = self.searchDialog.leftTabWidget_Results.currentWidget().findChild(QtGui.QListWidget, "resultsListWidget")
+        self.searchDialog.leftTabWidget_Results.setTabText(curtabidx, "[%s]" % str(listwidgetref.count()) + tabtext[endbracketidx+1:])
 
     def listItemClicked(self, listWidgetItem):
         self.searchDialog.resultLyricsView.setHtml(listWidgetItem.data(QtCore.Qt.UserRole).toPyObject())
+
+    def treeItemClicked(self, treeWidgetItem, column):
+        lyrics = treeWidgetItem.data(column, QtCore.Qt.UserRole).toPyObject()
+        if isinstance(lyrics, QtCore.QString):
+            self.searchDialog.resultLyricsView.setHtml(lyrics)
 
     def setInputEnabledState(self, state):
         self.searchDialog.songNameInput.setEnabled(state)
@@ -305,4 +342,4 @@ class lyricsSearchFunctions(object):
             self.searchDialog.leftTabWidget_Results.removeTab(tabIndex)
 
     def closeDialog(self):
-        self.searchJobFinished()
+        self.killActiveSearchThread()

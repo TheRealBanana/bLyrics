@@ -4,8 +4,16 @@ import re
 import sys
 import sqlite3
 from base64 import urlsafe_b64encode, urlsafe_b64decode
-from PyQt4.QtGui import QApplication
+from PyQt4.QtGui import QApplication, QDialog, QIcon
 from PyQt4.QtCore import SIGNAL, QObject
+from ..generic_progress_bar import Ui_genericProgressDialog
+
+class closableDialog(QDialog):
+    def __init__(self, parent=None):
+        super(closableDialog, self).__init__(parent)
+    def closeEvent(self, QCloseEvent):
+        self.emit(SIGNAL("ClosableDialogClosing"))
+        QCloseEvent.accept()
 
 #This folder is located two folder below the main src folder
 #src/dialogs/logic
@@ -50,6 +58,7 @@ class LyricsCacher(object):
         self.dbopen = False
         if self.checkForLyricsDb() is False: self.disableCache()
         self.filelist = self.getLyricsFileList()
+        self.librarydict = None
         self.cachedLyrics = None
         self.loadedIntoMem = False
         self.cancel = False
@@ -144,6 +153,41 @@ class LyricsCacher(object):
         self.dbopen = False
         print "Finished converting cache files. Added %s new song lyrics out of %s cache files." % (addnum, len(cachefilelist))
         return addnum, len(cachefilelist)
+
+    def getLibraryDict(self):
+        cachesize = self.getCacheSize()
+        if self.librarydict is None:
+            widget = closableDialog(QApplication.activeWindow().window())
+            progressbar = Ui_genericProgressDialog()
+            progressbar.setupUi(widget)
+            progressbar.progressBar.setMaximum(int(cachesize))
+            widget.setWindowIcon(QIcon(":/icon/bLyrics.ico"))
+            widget.setWindowTitle("Loading lyrics library...")
+            widget.setModal(True)
+            QObject.connect(widget, SIGNAL("ClosableDialogClosing"), self.cancelConvert)
+            QObject.connect(progressbar.cancelButton, SIGNAL("clicked()"), self.cancelConvert)
+            widget.show()
+            library = self.searchLyricsCache("%", "%", "%")
+            tmplibrarydict = {}
+            self.cancel = False
+            for idx, r in enumerate(library):
+                if self.cancel is True:
+                    tmplibrarydict = None
+                    break
+                song, artist = r
+                if tmplibrarydict.has_key(artist) is False:
+                    tmplibrarydict[artist] = {}
+                lyrics = self.getLyrics(song, artist)
+                tmplibrarydict[artist][song] = lyrics
+                #Update progress
+                perc = (float(idx)/float(cachesize))*100
+                labeltext = "[%s/%s - %.1f%%] Loading library..." % (idx, cachesize, perc)
+                progressbar.progressLabel.setText(labeltext)
+                progressbar.progressBar.setValue(idx)
+                QApplication.processEvents()
+            widget.close()
+            self.librarydict = tmplibrarydict
+        return self.librarydict
 
     @staticmethod
     def getCachefileName(song, artist):
