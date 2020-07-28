@@ -1,2 +1,2 @@
-python2.7 C:\Python27\Scripts\pyinstaller.exe bLyrics.spec
+python2.7 -m PyInstaller bLyrics.spec
 pause

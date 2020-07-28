@@ -137,9 +137,9 @@ class LyricsCacher(object):
                     lyrics = f.read()
                 #Write to db. This is a copy of the saveLyrics code but instead of constantly opening and closing the
                 #database we are keeping it open the whole processes.
-                if not isinstance(song, unicode): song = unicode(song, "utf-8")
-                if not isinstance(artist, unicode): artist = unicode(artist, "utf-8")
-                if not isinstance(lyrics, unicode): lyrics = unicode(lyrics, "utf-8")
+                song = self.unistr(song)
+                artist = self.unistr(artist)
+                lyrics = self.unistr(lyrics)
                 if len(lyrics.splitlines()) > 1:
                     #Looks like we have newlines already, remove any br's and hope it looks fine
                     lyrics = HTMLBREAKREGEX.sub("", lyrics)
@@ -206,6 +206,11 @@ class LyricsCacher(object):
         self.searchLyrics = self.noCacheForYou
 
     @staticmethod
+    def unistr(str):
+        if not isinstance(str, unicode): str = unicode(str, "utf-8")
+        return str
+
+    @staticmethod
     def getLyricsFileList():
         #Only our cache files
         return [f for f in os.listdir(CACHEWRITEFOLDER) if
@@ -216,34 +221,34 @@ class LyricsCacher(object):
     #with SequenceMatcher to check for almost matches. Not sure yet.
     def checkSong(self, song, artist):
         #Cause python2 we have to do some unicode handling
-        if not isinstance(song, unicode): song = unicode(song, "utf-8")
-        if not isinstance(artist, unicode): artist = unicode(artist, "utf-8")
+        song = self.unistr(song)
+        artist = self.unistr(artist)
         if self.dbopen is True: return False
         with getDbCursor(DATABASE_PATH) as dbcursor:
             data = dbcursor.execute("SELECT COUNT(1) FROM blyrics_data WHERE song=? AND artist=?", (song, artist)).fetchone()
         return bool(data[0])
 
     def searchLyricsCache(self, song, artist, lyricsstring):
-        if not isinstance(song, unicode): song = unicode(song, "utf-8")
-        if not isinstance(artist, unicode): artist = unicode(artist, "utf-8")
-        if not isinstance(lyricsstring, unicode): lyricsstring = unicode(lyricsstring, "utf-8")
+        song = self.unistr(song)
+        artist = self.unistr(artist)
+        lyricsstring = self.unistr(lyricsstring)
         if self.dbopen is True: return False
         with getDbCursor(DATABASE_PATH) as dbcursor:
             results = dbcursor.execute("SELECT song, artist FROM blyrics_data WHERE artist LIKE ? AND song LIKE ? AND lyrics LIKE ?", (artist, song, lyricsstring)).fetchall()
         return results
 
     def getLyrics(self, song, artist):
-        if not isinstance(song, unicode): song = unicode(song, "utf-8")
-        if not isinstance(artist, unicode): artist = unicode(artist, "utf-8")
+        song = self.unistr(song)
+        artist = self.unistr(artist)
         if self.dbopen is True: return False
         with getDbCursor(DATABASE_PATH) as dbcursor:
             data = dbcursor.execute("SELECT lyrics FROM blyrics_data where song=? AND artist=?", (song, artist)).fetchone()
         return data[0].replace("\n", "<br>")
 
     def saveLyrics(self, song, artist, lyrics, noupdate=False):
-        if not isinstance(song, unicode): song = unicode(song, "utf-8")
-        if not isinstance(artist, unicode): artist = unicode(artist, "utf-8")
-        if not isinstance(lyrics, unicode): lyrics = unicode(lyrics, "utf-8")
+        song = self.unistr(song)
+        artist = self.unistr(artist)
+        lyrics = self.unistr(lyrics)
 
         if len(lyrics.splitlines()) > 1:
             #Looks like we have newlines already, remove any br's and hope it looks fine
