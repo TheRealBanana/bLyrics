@@ -12,21 +12,18 @@ END_HIGHLIGHT = "</span>"
 #Sorting in QTreeWidget is unfortunately case sensitive (A-Z followed by a-z) which is annoying.
 #Reimplementing the less-than function in QTreeWidgetItem should fix this.
 class QTreeWidgetItemNocase(QtGui.QTreeWidgetItem):
-    def __eq__(self, other):
-        if unicode(self.text(0), "utf-8") == unicode(other.text(0), "utf-8"):
-            return True
-        else:
-            return False
+    def __init__(self, parent=None):
+        super(QTreeWidgetItemNocase, self).__init__(parent)
 
-    def __gt__(self, other):
-        if not self.__lt__(other):
+    def __eq__(self, other):
+        if unicode(self.text(0), "utf-8").lower() == unicode(other.text(0), "utf-8").lower():
             return True
         else:
             return False
 
     def __lt__(self, other):
         #Just make it all lowercase for comparison and only compare the first column
-        if unicode(self.text(0), "utf-8").lower() < unicode(other.text(0), "utf-8"):
+        if unicode(self.text(0), "utf-8").lower() < unicode(other.text(0), "utf-8").lower():
             return True
         else:
             return False
@@ -250,14 +247,13 @@ class lyricsSearchFunctions(object):
                 song_item = QTreeWidgetItemNocase(artist_item)
                 song_item.setText(0, song)
                 song_item.setData(0, QtCore.Qt.UserRole, library[a][song])
+            artist_item.sortChildren(0, QtCore.Qt.AscendingOrder)
 
 
     def libraryContextMenu(self, qpoint):
         treewidget = self.searchDialog.leftTabWidget_Results.findChild(QtGui.QTreeWidget, "treeWidget")
-        cur_item = treewidget.currentItem()
         #Build up our context menu
         menu = QtGui.QMenu()
-        menu.setTitle("MENU")
         edit_action = QtGui.QAction("Edit", menu)
         delete_action = QtGui.QAction("Delete", menu)
         QtCore.QObject.connect(edit_action, QtCore.SIGNAL("triggered()"), self.editItemCallback)
