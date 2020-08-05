@@ -555,8 +555,8 @@ p, li { white-space: pre-wrap; }
         searchdialog.setupUi(self.searchWidget)
         self.searchfunctionsinstance = lyricsSearchFunctions(searchdialog, self.lyricsCache)
         #Make sure the library is loaded otherwise dont show the search dialog
-        #I hate this code. Having to reach two levels deep to check something is not right
-        if self.searchfunctionsinstance.lyricsCacherRef.librarydict is None:
+        #Sometimes I wonder....
+        if self.lyricsCache.librarydict is None:
             return
         if _ALWAYS_ON_TOP_:
             self.searchWidget.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)

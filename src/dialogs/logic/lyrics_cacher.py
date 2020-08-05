@@ -157,7 +157,7 @@ class LyricsCacher(object):
                 else:
                     lyrics = HTMLBREAKREGEX.sub(os.linesep, lyrics)
                 #Don't add anything already in the database
-                if bool(dbcursor.execute("SELECT COUNT(1) FROM blyrics_data WHERE song=? AND artist=? COLLATE NOCASE", (song, artist)).fetchone()[0]) is False:
+                if bool(dbcursor.execute("SELECT COUNT(1) FROM blyrics_data WHERE song=? AND artist=?", (song, artist)).fetchone()[0]) is False:
                     dbcursor.execute("INSERT INTO blyrics_data VALUES (?,?,?,?)", (song, artist, 0, lyrics))
                     addnum += 1
 
