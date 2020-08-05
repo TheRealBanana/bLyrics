@@ -1,2 +1,2 @@
-python2.7 -m PyInstaller bLyrics.spec
+python -m PyInstaller bLyrics.spec
 pause

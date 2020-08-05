@@ -9,6 +9,29 @@ END_HIGHLIGHT = "</span>"
 #END_HIGHLIGHT = "</b>"
 
 
+#Sorting in QTreeWidget is unfortunately case sensitive (A-Z followed by a-z) which is annoying.
+#Reimplementing the less-than function in QTreeWidgetItem should fix this.
+class QTreeWidgetItemNocase(QtGui.QTreeWidgetItem):
+    def __eq__(self, other):
+        if unicode(self.text(0), "utf-8") == unicode(other.text(0), "utf-8"):
+            return True
+        else:
+            return False
+
+    def __gt__(self, other):
+        if not self.__lt__(other):
+            return True
+        else:
+            return False
+
+    def __lt__(self, other):
+        #Just make it all lowercase for comparison and only compare the first column
+        if unicode(self.text(0), "utf-8").lower() < unicode(other.text(0), "utf-8"):
+            return True
+        else:
+            return False
+
+
 #This function is just superb and I know I couldn't do any better.
 #Thanks so much to Ulf Aslak for this
 #https://stackoverflow.com/questions/36013295/find-best-substring-match/36132391#36132391
@@ -209,21 +232,140 @@ class lyricsSearchFunctions(object):
         newtab = QtGui.QWidget()
         verticallayout = QtGui.QVBoxLayout(newtab)
         treeWidget = QtGui.QTreeWidget(newtab)
+        treeWidget.setObjectName("treeWidget")
         treeWidget.setHeaderLabel("Lyrics Cache")
+        treeWidget.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        QtCore.QObject.connect(treeWidget, QtCore.SIGNAL("customContextMenuRequested(QPoint)"), self.libraryContextMenu)
         verticallayout.addWidget(treeWidget)
         self.searchDialog.leftTabWidget_Results.addTab(newtab, "Library (%s)" % self.cachesize)
         #Hide the tab's close button. We want this tab to be permanent.
         self.searchDialog.leftTabWidget_Results.tabBar().tabButton(0, QtGui.QTabBar.RightSide).resize(0,0)
         QtCore.QObject.connect(treeWidget, QtCore.SIGNAL("itemClicked(QTreeWidgetItem*, int)"), self.treeItemClicked)
         artists = library.keys()
-        artists.sort()
+        artists = sorted(artists, key=lambda s: s.lower()) #TODO Ignore case entirely in database
         for a in artists:
-            artist_item = QtGui.QTreeWidgetItem(treeWidget)
+            artist_item = QTreeWidgetItemNocase(treeWidget)
             artist_item.setText(0, a)
             for song in library[a]:
-                song_item = QtGui.QTreeWidgetItem(artist_item)
+                song_item = QTreeWidgetItemNocase(artist_item)
                 song_item.setText(0, song)
                 song_item.setData(0, QtCore.Qt.UserRole, library[a][song])
+
+
+    def libraryContextMenu(self, qpoint):
+        treewidget = self.searchDialog.leftTabWidget_Results.findChild(QtGui.QTreeWidget, "treeWidget")
+        cur_item = treewidget.currentItem()
+        #Build up our context menu
+        menu = QtGui.QMenu()
+        menu.setTitle("MENU")
+        edit_action = QtGui.QAction("Edit", menu)
+        delete_action = QtGui.QAction("Delete", menu)
+        QtCore.QObject.connect(edit_action, QtCore.SIGNAL("triggered()"), self.editItemCallback)
+        QtCore.QObject.connect(delete_action, QtCore.SIGNAL("triggered()"), self.deleteItemCallback)
+        menu.addAction(edit_action)
+        menu.addAction(delete_action)
+        #For some weird reason this is different from QWidget.mapToGlobal(qpoint) just slightly in its y value.
+        #The qpoint is just slightly too high. I think it has to do with which QWidget I am using for the mapTopGlobal()
+        #function. I tried treewidget first which produced the poor results. QTreeWidgetItems don't have that function
+        #and the current widget set on a QTreeWidgetItem on creation is None, so we can't use that either.
+        pos = QtGui.QCursor.pos()
+        #popup has issues if our dialogs are model/always-on-top. Popup will really popunder and you wont see the menu.
+        menu.exec_(pos)
+
+
+    def deleteItemCallback(self):
+        treewidget = self.searchDialog.leftTabWidget_Results.findChild(QtGui.QTreeWidget, "treeWidget")
+        cur_item = treewidget.currentItem()
+        parent_item = cur_item.parent()
+        if parent_item is not None:
+            cur_item_index = parent_item.indexOfChild(cur_item)
+            parent_item_index = treewidget.indexOfTopLevelItem(parent_item)
+            if QtGui.QMessageBox.question(treewidget.window(), "Delete song %s?" % cur_item.text(0), "Are you sure you want to remove the song %s by %s from the lyrics cache?" % (cur_item.text(0), parent_item.text(0)), QtGui.QMessageBox.Yes, QtGui.QMessageBox.No) == QtGui.QMessageBox.Yes:
+                self.lyricsCacherRef.deleteSong(song=cur_item.text(0), artist=parent_item.text(0))
+                parent_item.removeChild(cur_item_index)
+                if parent_item.childCount() == 0:
+                    self.lyricsCacherRef.deleteArtist(parent_item.text(0))
+                    treewidget.takeTopLevelItem(parent_item_index)
+        else:
+            #Removing entire artist
+            numsongs = cur_item.childCount()
+            cur_item_index = treewidget.indexOfTopLevelItem(cur_item)
+            if QtGui.QMessageBox.question(treewidget.window(), "Delete artist %s?" % cur_item.text(0), "Are you sure you want to remove all cached lyrics for the artist %s? This will remove %s cached song%s." % (cur_item.text(0), numsongs, "s" if numsongs > 1 else ""), QtGui.QMessageBox.Yes, QtGui.QMessageBox.No) == QtGui.QMessageBox.Yes:
+                self.lyricsCacherRef.deleteArtist(cur_item.text(0))
+                treewidget.takeTopLevelItem(cur_item_index)
+
+
+    def editItemCallback(self):
+        #Make sure to set editing finished signal calls for focus loss on QLineEdit as well as enter keys
+        treewidget = self.searchDialog.leftTabWidget_Results.findChild(QtGui.QTreeWidget, "treeWidget")
+        cur_item = treewidget.currentItem()
+        sz = cur_item.sizeHint(0)
+        edit_widget = QtGui.QLineEdit(cur_item.text(0))
+        edit_widget.resize(sz)
+        edit_widget.setFrame(False)
+        treewidget.setItemWidget(cur_item, 0, edit_widget)
+        QtCore.QObject.connect(edit_widget, QtCore.SIGNAL("editingFinished()"), self.editItemFinishCallback)
+        edit_widget.setFocus(QtCore.Qt.OtherFocusReason)
+        edit_widget.selectAll()
+
+    def editItemFinishCallback(self):
+        treewidget = self.searchDialog.leftTabWidget_Results.findChild(QtGui.QTreeWidget, "treeWidget")
+        cur_item = treewidget.currentItem()
+        edit_widget = treewidget.itemWidget(cur_item, 0)
+        treewidget.removeItemWidget(cur_item, 0)
+        #If we didnt change anything dont do anything
+        if edit_widget.text() == cur_item.text(0): return
+        #Do we need to update a song or an entire artist?
+        parent_item = cur_item.parent()
+        #Make edit first, then do the deletion. If anything blows up on edit we hopefully wont also lose data.
+        if parent_item is not None: #Editing song name, easy
+            song = cur_item.text(0)
+            newsong = edit_widget.text()
+            origartistname = parent_item.text(0)
+            lyrics = cur_item.data(0, QtCore.Qt.UserRole).toPyObject().replace("<br>", "\n")
+            if self.lyricsCacherRef.checkSong(newsong, origartistname) is False: #Dont allow changing song name to something that already exists
+                if self.lyricsCacherRef.saveLyrics(newsong, origartistname, lyrics):
+                    self.lyricsCacherRef.deleteSong(song, origartistname) #Very important that we only delete the song after we confirm we have saved the new lyrics.
+                    cur_item.setText(0, edit_widget.text())
+        else:
+            #Changing artist name. If the new artist name already exists, we don't want to transfer any songs with the
+            #same title. These duplicate songs will be left behind and the user will just have to delete them manually.
+            origartistname = unicode(cur_item.text(0), "utf-8")
+            newartistname = unicode(edit_widget.text(), "utf-8")
+            songlist = {}
+            for i in range(cur_item.childCount()):
+                c = cur_item.child(i)
+                songlist[unicode(c.text(0), "utf-8")] = c
+            #Should remove the duplicates from our add-list
+            #Then we use the add-list to remove the old entries
+            if self.lyricsCacherRef.checkArtist(newartistname) is True:
+                #Should only ever return one result
+                newartistitem = treewidget.findItems(newartistname, QtCore.Qt.MatchCaseSensitive, column=0)[0]
+                for i in range(newartistitem.childCount()):
+                    cname = unicode(newartistitem.child(i).text(0), "utf-8")
+                    if songlist.has_key(cname):
+                        del songlist[cname]
+            else:
+                #I could pull the name of every item and compare or I could just add it to the library dict and then
+                #get its index from the sorted keylist. Im lazy so ima do it the second way.
+                self.lyricsCacherRef.librarydict[newartistname] = {}
+                alist = self.lyricsCacherRef.librarydict.keys()
+                alist = sorted(alist, key=lambda s: s.lower())
+                newartistitemindex = alist.index(newartistname)
+                newartistitem = QTreeWidgetItemNocase()
+                newartistitem.setText(0, newartistname)
+                treewidget.insertTopLevelItem(newartistitemindex, newartistitem)
+            # By now we should definitely have a newartistitem object we can add the songs to
+            for n in songlist.values():
+                cur_item.removeChild(n)
+                newartistitem.addChild(n)
+                lyrics = n.data(0, QtCore.Qt.UserRole).toPyObject().replace("<br>", "\n")
+                self.lyricsCacherRef.deleteSong(n.text(0), origartistname)
+                self.lyricsCacherRef.saveLyrics(n.text(0), newartistname, lyrics)
+            if cur_item.childCount() == 0:
+                self.lyricsCacherRef.deleteArtist(origartistname)
+                treewidget.takeTopLevelItem(treewidget.indexOfTopLevelItem(cur_item))
+
 
     def searchCountUpdate(self, n, total):
         self.searchDialog.searchButton.setText("Cancel Search  -  %s/%s" % (n, total))

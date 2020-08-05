@@ -39,12 +39,14 @@ HTMLBREAKREGEX = re.compile("<br( /)?>", flags=re.I|re.M)
 
 #Trying out something new, hoping this will make the code cleaner
 class getDbCursor(object):
-    def __init__(self, dbpath, contype='r'):
+    def __init__(self, dbpath, dbmutex, contype='r'):
         self.dbpath = dbpath
+        self.dbmutex = dbmutex
         self.contype = contype
         self.dbhandle = None
         self.dbcursor = None
     def __enter__(self):
+        self.dbmutex = True
         self.dbhandle = sqlite3.connect(self.dbpath)
         self.dbcursor = self.dbhandle.cursor()
         return self.dbcursor
@@ -52,19 +54,30 @@ class getDbCursor(object):
         if self.contype == 'w':
             self.dbhandle.commit()
         self.dbhandle.close()
+        self.dbmutex = False
+
+#Trying some more new stuff. Never found much use for decorators before but I think in this case its worth it.
+#Was getting tired of repasting the same code over and over on each function.
+def checkDbOpen(func):
+    def dec(*args, **kwargs):
+        if args[0].dbmutex is True:
+            return False
+        else:
+            return func(*args, **kwargs)
+    return dec
 
 class LyricsCacher(object):
     def __init__(self):
-        self.dbopen = False
+        self.dbmutex = False
         if self.checkForLyricsDb() is False: self.disableCache()
         self.filelist = self.getLyricsFileList()
         self.librarydict = None
         self.cachedLyrics = None
-        self.loadedIntoMem = False
         self.cancel = False
 
     #Been a while since ive done any db stuff so its all a bit rusty. Im trying to only have the db open while an
     #operation is happening. That means lots of duplicate code but meh.
+    @checkDbOpen
     def checkForLyricsDb(self):
         #Check if we have a folder and if not create it
         if os.access(CACHEWRITEFOLDER, os.F_OK) is False:
@@ -74,8 +87,7 @@ class LyricsCacher(object):
                 return False
         #Now see if we have a database file and if not create a new one
         if os.access(DATABASE_PATH, os.W_OK):
-            if self.dbopen is True: return False
-            with getDbCursor(DATABASE_PATH) as dbcursor:
+            with getDbCursor(DATABASE_PATH, self.dbmutex) as dbcursor:
                 try:
                     table_list = dbcursor.execute("SELECT name FROM sqlite_master where type='table' ORDER BY name").fetchone()
                 except sqlite3.DatabaseError:
@@ -89,8 +101,7 @@ class LyricsCacher(object):
         else:
             # No database file exists so we are going to create it and try and
             # populate it with old-style cache file if they exist.
-            if self.dbopen is True: return False
-            with getDbCursor(DATABASE_PATH, 'w') as dbcursor:
+            with getDbCursor(DATABASE_PATH, self.dbmutex, 'w') as dbcursor:
                 #Lyrics table
                 dbcursor.execute("CREATE TABLE blyrics_data ("
                                  "song TEXT,"
@@ -102,6 +113,7 @@ class LyricsCacher(object):
             print "Created new lyrics database file."
             return True
 
+    @checkDbOpen
     def convertOldCache(self, progressbar):
         cachefilelist = self.getLyricsFileList()
         #Set up our progressbar
@@ -115,9 +127,8 @@ class LyricsCacher(object):
         self.cancel = False
         #We're going to be keeping the database open the entire time for performance reasons. Its an order of magnitude
         #slower to constantly open and close the database when we want to write.
-        if self.dbopen is True: return False
-        self.dbopen = True
-        with getDbCursor(DATABASE_PATH, "w") as dbcursor:
+        self.dbmutex = True
+        with getDbCursor(DATABASE_PATH, self.dbmutex, "w") as dbcursor:
             for idx, filename in enumerate(cachefilelist):
                 if self.cancel:
                     break
@@ -146,11 +157,11 @@ class LyricsCacher(object):
                 else:
                     lyrics = HTMLBREAKREGEX.sub(os.linesep, lyrics)
                 #Don't add anything already in the database
-                if bool(dbcursor.execute("SELECT COUNT(1) FROM blyrics_data WHERE song=? AND artist=?", (song, artist)).fetchone()[0]) is False:
+                if bool(dbcursor.execute("SELECT COUNT(1) FROM blyrics_data WHERE song=? AND artist=? COLLATE NOCASE", (song, artist)).fetchone()[0]) is False:
                     dbcursor.execute("INSERT INTO blyrics_data VALUES (?,?,?,?)", (song, artist, 0, lyrics))
                     addnum += 1
 
-        self.dbopen = False
+        self.dbmutex = False
         print "Finished converting cache files. Added %s new song lyrics out of %s cache files." % (addnum, len(cachefilelist))
         return addnum, len(cachefilelist)
 
@@ -175,6 +186,8 @@ class LyricsCacher(object):
                     tmplibrarydict = None
                     break
                 song, artist = r
+                song = self.unistr(song)
+                artist = self.unistr(artist)
                 if tmplibrarydict.has_key(artist) is False:
                     tmplibrarydict[artist] = {}
                 lyrics = self.getLyrics(song, artist)
@@ -219,32 +232,58 @@ class LyricsCacher(object):
 
     #For now this is exact matching now. Later we may use the b64decode()'d string
     #with SequenceMatcher to check for almost matches. Not sure yet.
+    @checkDbOpen
     def checkSong(self, song, artist):
         #Cause python2 we have to do some unicode handling
         song = self.unistr(song)
         artist = self.unistr(artist)
-        if self.dbopen is True: return False
-        with getDbCursor(DATABASE_PATH) as dbcursor:
+        with getDbCursor(DATABASE_PATH, self.dbmutex) as dbcursor:
             data = dbcursor.execute("SELECT COUNT(1) FROM blyrics_data WHERE song=? AND artist=?", (song, artist)).fetchone()
         return bool(data[0])
 
+    @checkDbOpen
+    def checkArtist(self, artist):
+        artist = self.unistr(artist)
+        with getDbCursor(DATABASE_PATH, self.dbmutex) as dbcursor:
+            data = dbcursor.execute("SELECT COUNT(1) FROM blyrics_data WHERE artist=?", (artist,)).fetchone()
+        return bool(data[0])
+
+    @checkDbOpen
     def searchLyricsCache(self, song, artist, lyricsstring):
         song = self.unistr(song)
         artist = self.unistr(artist)
         lyricsstring = self.unistr(lyricsstring)
-        if self.dbopen is True: return False
-        with getDbCursor(DATABASE_PATH) as dbcursor:
+        with getDbCursor(DATABASE_PATH, self.dbmutex) as dbcursor:
             results = dbcursor.execute("SELECT song, artist FROM blyrics_data WHERE artist LIKE ? AND song LIKE ? AND lyrics LIKE ?", (artist, song, lyricsstring)).fetchall()
         return results
 
+    @checkDbOpen
     def getLyrics(self, song, artist):
         song = self.unistr(song)
         artist = self.unistr(artist)
-        if self.dbopen is True: return False
-        with getDbCursor(DATABASE_PATH) as dbcursor:
+        with getDbCursor(DATABASE_PATH, self.dbmutex) as dbcursor:
             data = dbcursor.execute("SELECT lyrics FROM blyrics_data where song=? AND artist=?", (song, artist)).fetchone()
         return data[0].replace("\n", "<br>")
 
+    @checkDbOpen
+    def deleteSong(self, song, artist):
+        song = self.unistr(song)
+        artist = self.unistr(artist)
+        if self.checkSong(song, artist):
+            with getDbCursor(DATABASE_PATH, self.dbmutex, "w") as dbcursor:
+                dbcursor.execute("DELETE FROM blyrics_data WHERE SONG=? AND artist=?", (song, artist))
+            if self.librarydict is not None:
+                del(self.librarydict[artist][song])
+
+    @checkDbOpen
+    def deleteArtist(self, artist):
+        artist = self.unistr(artist)
+        with getDbCursor(DATABASE_PATH, self.dbmutex, "w") as dbcursor:
+            dbcursor.execute("DELETE FROM blyrics_data WHERE artist=?", (artist,))
+        if self.librarydict is not None:
+            del(self.librarydict[artist])
+
+    @checkDbOpen
     def saveLyrics(self, song, artist, lyrics, noupdate=False):
         song = self.unistr(song)
         artist = self.unistr(artist)
@@ -255,8 +294,7 @@ class LyricsCacher(object):
             lyrics = HTMLBREAKREGEX.sub("", lyrics)
         else:
             lyrics = HTMLBREAKREGEX.sub(os.linesep, lyrics)
-        if self.dbopen is True: return False
-        with getDbCursor(DATABASE_PATH, 'w') as dbcursor:
+        with getDbCursor(DATABASE_PATH, self.dbmutex, 'w') as dbcursor:
             #Are we setting new lyrics or updating old ones?
             if self.checkSong(song, artist) is False:
                 dbcursor.execute("INSERT INTO blyrics_data VALUES (?,?,?,?)", (song, artist, 0, lyrics))
@@ -264,19 +302,23 @@ class LyricsCacher(object):
                 dbcursor.execute("UPDATE blyrics_data SET lyrics=? WHERE song=? AND artist=?", (lyrics, song, artist))
             else:
                 return False
+        if self.librarydict is not None:
+            if self.librarydict.has_key(artist) is False:
+                self.librarydict[artist] = {}
+            self.librarydict[artist][song] = lyrics.replace("\n", "<br>")
         return True
 
+    @checkDbOpen
     def getCacheSize(self):
-        if self.dbopen is True: return False
-        with getDbCursor(DATABASE_PATH) as dbcursor:
+        with getDbCursor(DATABASE_PATH, self.dbmutex) as dbcursor:
             data = dbcursor.execute("SELECT COUNT(*) FROM blyrics_data").fetchone()
         return data[0]
 
+    @checkDbOpen
     def clearLyricsCache(self):
         print "Clearing Lyrics Cache..."
         cachesize = self.getCacheSize()
-        if self.dbopen is True: return False
-        with getDbCursor(DATABASE_PATH, "w") as dbcursor:
+        with getDbCursor(DATABASE_PATH, self.dbmutex, "w") as dbcursor:
             dbcursor.execute("DELETE FROM blyrics_data")
             dbcursor.execute("VACUUM")
         return cachesize
