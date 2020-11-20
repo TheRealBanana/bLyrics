@@ -250,8 +250,7 @@ class lyricsSearchFunctions(object):
             artist_item.sortChildren(0, QtCore.Qt.AscendingOrder)
 
 
-    def libraryContextMenu(self, qpoint):
-        treewidget = self.searchDialog.leftTabWidget_Results.findChild(QtGui.QTreeWidget, "treeWidget")
+    def libraryContextMenu(self, _):
         #Build up our context menu
         menu = QtGui.QMenu()
         edit_action = QtGui.QAction("Edit", menu)
@@ -356,6 +355,8 @@ class lyricsSearchFunctions(object):
                 cur_item.removeChild(n)
                 newartistitem.addChild(n)
                 lyrics = n.data(0, QtCore.Qt.UserRole).toPyObject().replace("<br>", "\n")
+                #Can't do these in opposite order or it fails. Would have to delete and recreate the QTreeWidgetItem
+                #or we would have to remove the current parent object (maybe, might not work). 
                 self.lyricsCacherRef.deleteSong(n.text(0), origartistname)
                 self.lyricsCacherRef.saveLyrics(n.text(0), newartistname, lyrics)
             if cur_item.childCount() == 0:
