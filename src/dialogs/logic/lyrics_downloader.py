@@ -1,5 +1,6 @@
 from PyQt4.QtCore import QObject, SIGNAL
 from ntpath import basename
+from time import strftime
 import os
 import os.path
 import re
@@ -60,9 +61,9 @@ class threadedLyricsDownloader(QObject):
         self.emit(SIGNAL("lyricsUpdate"), lyrics, providername)
         self.emit(SIGNAL("workFinished()"))
 
-    #TODO Implement checking of failedtries for lyrics to stop fetching instrumental/lyric-less songs.
     def getUpdatedLyrics(self):
         #Are we being asked to retrieve from a specific source only?
+        #Failures here will not affect any currently saved lyrics for the song if there are any.
         if self.customProvider is not None:
             try:
                 lyrics = self.customProvider.getLyrics(self.song, self.artist)
@@ -86,5 +87,11 @@ class threadedLyricsDownloader(QObject):
                         return (lyrics, p.LYRICS_PROVIDER_NAME)
                 except:
                     continue
+            #All our providers failed. Instead of just returning an error message we set the lyrics for this song to that
+            #error message too. This way we won't keep trying to get the lyrics over and over, angering the providers we use.
+            lastupdatestr = "<font size=\"-1\">Last update attempt was on %s</font>" % (strftime("%A, %B %d, %Y at %I:%M%p"))
             providerlist = ", ".join([p.LYRICS_PROVIDER_NAME for p in self.providers])
-            return ("Couldn't find lyrics for '%s' by %s. <br><br>Tried following lyrics providers: %s" % (self.song, self.artist, providerlist), None)
+            errormessage = "Couldn't find lyrics for '%s' by %s. <br><br>" \
+                            "Tried the following lyrics providers: %s<br><br>%%s"  % (self.song, self.artist, providerlist)
+            self.lyricsCache.saveLyrics(self.song, self.artist, errormessage % lastupdatestr)
+            return (errormessage % "", None)
