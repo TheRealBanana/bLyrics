@@ -46,12 +46,18 @@ class LyricsProvider(object):
         #Using selenium now
         search_html = seleniumdriver.getHtmlWithDriver(queryurl)
 
-        raw_json = re.search("<div id=\"json\">(.*?)</div>", search_html, re.DOTALL|re.IGNORECASE|re.MULTILINE).group(1)
+        #raw_json = re.search("<div id=\"json\">(.*?)</div>", search_html, re.DOTALL|re.IGNORECASE|re.MULTILINE).group(1)
+        raw_json = re.search("><body><pre.*?>(.*?)</pre>", search_html, re.DOTALL|re.IGNORECASE|re.MULTILINE)
+        if raw_json is None:
+            print "There was an error extracting json data"
+            return None
         loaded_json = json.loads(raw_json)
         #Didnt get error 401'd or 500'd so lets keep goin
         if loaded_json["meta"]["status"] == 200:
             results = loaded_json["response"]["sections"][0]["hits"]
             for r in results:
+                if r["type"] != "song":
+                    continue
                 resultdata = r["result"]
                 #Some songs come back instrumental when they arent, dunno why
                 #if resultdata["instrumental"] is True:
@@ -65,8 +71,13 @@ class LyricsProvider(object):
                 result_artist = resultdata["primary_artist"]["name"]
                 if sMatcher(None, song.lower(), result_song.lower()).ratio() > self._MASTER_RATIO+.1 and sMatcher(None, artist.lower(), result_artist.lower()).ratio() > self._MASTER_RATIO:
                     #Got good lyrics, lets get them
-                    lyrics_html = getHtmlWithDriver(result_url)
-                    raw_lyrics = re.search("(<section ng-hide=\".*?</section>)", lyrics_html, re.S|re.I).group(1).strip()
+                    lyrics_html = seleniumdriver.getHtmlWithDriver(result_url)
+                    #raw_lyrics = re.search("(<section ng-hide=\".*?</section>)", lyrics_html, re.S|re.I).group(1).strip()
+                    rl_regex = re.search("<div class=\"lyrics\">(.*?)</div>", lyrics_html, re.S|re.I)
+                    if rl_regex is None:
+                        print "There was an error trying to find the lyrics div"
+                        continue
+                    raw_lyrics = rl_regex.group(1).strip()
                     raw_lyrics = raw_lyrics.replace("\n", "%BREAK%")
                     raw_lyrics = raw_lyrics.replace("<br>", "%BREAK%")
                     stripper = MLStripper()
