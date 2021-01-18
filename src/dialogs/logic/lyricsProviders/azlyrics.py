@@ -1,7 +1,7 @@
 from urllib import quote_plus
 import re
 from difflib import SequenceMatcher as sMatcher
-from .seleniumDriver import getHtmlWithDriver
+import seleniumDriver
 
 LYRICS_PROVIDER_NAME="AZlyrics"
 LYRICS_PROVIDER_VERSION="1.2"
@@ -20,14 +20,14 @@ class LyricsProvider(object):
         self.LYRICS_PROVIDER_NAME = LYRICS_PROVIDER_NAME
         self.LYRICS_PROVIDER_VERSION = LYRICS_PROVIDER_VERSION
 
-    def getLyrics(self, song, artist):
+    def getLyrics(self, song, artist, seleniumdriver=seleniumDriver):
         surl = "https://search.azlyrics.com/search.php?q=%s&w=songs&p=1"
         query_data = quote_plus(song + " " + artist)
         queryurl = surl % query_data
 
         #Having to use Selenium now since even AZlyrics has started to block normal requests with special CSS.
         #Wonder how long until they start detecting Selenium...
-        search_html = getHtmlWithDriver(queryurl)
+        search_html = seleniumdriver.getHtmlWithDriver(queryurl)
 
         search_results = re.search("^.*Song results.*?<td class=\"text-left visitedlyr\".*?>(.*?)(?:</table>).*</html>$", search_html.strip(), re.S|re.MULTILINE)
         if search_results is not None:
@@ -39,7 +39,7 @@ class LyricsProvider(object):
                 #Check if this result is the right one
                 if sMatcher(None, song.lower(), result_song.lower()).ratio() > self._MASTER_RATIO and sMatcher(None, artist.lower(), result_artist.lower()).ratio() > self._MASTER_RATIO:
                     #Time to get the lyrics
-                    lyrics_html = getHtmlWithDriver(result_url)
+                    lyrics_html = seleniumdriver.getHtmlWithDriver(result_url)
 
                     #We're not a third party lyrics provider rite??? Psshhhhh
                     warnbanner = "<!-- Usage of azlyrics.com content by any third-party lyrics provider is prohibited by our licensing agreement. Sorry about that. -->"

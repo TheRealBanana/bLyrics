@@ -6,7 +6,7 @@ import json
 import re
 from difflib import SequenceMatcher as sMatcher
 from HTMLParser import HTMLParser
-from .seleniumDriver import getHtmlWithDriver
+import seleniumDriver
 
 LYRICS_PROVIDER_NAME="Genius"
 LYRICS_PROVIDER_VERSION="1.1"
@@ -37,14 +37,14 @@ class LyricsProvider(object):
         self.LYRICS_PROVIDER_NAME = LYRICS_PROVIDER_NAME
         self.LYRICS_PROVIDER_VERSION = LYRICS_PROVIDER_VERSION
 
-    def getLyrics(self, song, artist):
+    def getLyrics(self, song, artist, seleniumdriver=seleniumDriver):
         final_lyrics = None
         surl = "https://genius.com/api/search/multi?page=1&q=%s"
         query_data = urllib.quote_plus(song + " " + artist)
         queryurl = surl % query_data
 
         #Using selenium now
-        search_html = getHtmlWithDriver(queryurl)
+        search_html = seleniumdriver.getHtmlWithDriver(queryurl)
 
         raw_json = re.search("<div id=\"json\">(.*?)</div>", search_html, re.DOTALL|re.IGNORECASE|re.MULTILINE).group(1)
         loaded_json = json.loads(raw_json)
